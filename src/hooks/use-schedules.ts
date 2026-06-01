@@ -1,0 +1,44 @@
+// src/hooks/use-schedules.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiService } from "../lib/api";
+import { CreateScheduleDto } from "../types/interfaces";
+
+// Centralized cache keys
+export const SCHEDULE_KEYS = {
+  schedules: ["schedules-list"] as const,
+};
+
+/**
+ * Hook to fetch active pipeline items
+ */
+export function useFetchSchedules() {
+  return useQuery({
+    queryKey: SCHEDULE_KEYS.schedules,
+    queryFn: apiService.fetchSchedules,
+  });
+}
+
+/**
+ * Mutation hook to execute file file uploads to the dedicated media pipeline
+ */
+export function useUploadMedia() {
+  return useMutation({
+    mutationFn: (file: File) => apiService.uploadMedia(file),
+  });
+}
+
+/**
+ * Mutation hook to create a schedule
+ */
+export function useCreateSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dto: CreateScheduleDto) => apiService.createSchedule(dto),
+    onSuccess: () => {
+      // Automatic invalidation tells TanStack Query to refresh the list
+      // immediately upon successful schedule creation.
+      queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
+    },
+  });
+}
