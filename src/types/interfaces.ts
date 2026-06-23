@@ -19,7 +19,7 @@ export interface TimeSlot {
 }
 
 export interface FrequencyConfiguration {
-  intervalSeconds: number;
+  intervalSeconds?: number;
   type: "loop" | "once" | string;
 }
 
@@ -79,7 +79,8 @@ export interface ScheduleResponse {
   category: AdCategory;
   tags: string[];
   ownership: OwnershipType;
-  status: ScheduleStatus | string;
+  status: ScheduleStatus;
+  locationIds: string[];
   created_at: string; // ISO Date String
   updated_at: string; // ISO Date String
 }

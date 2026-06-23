@@ -94,10 +94,10 @@ export default function CreateStationForm({
         onSuccess: () => {
           // Reset form fields
           reset({ name: "", address: "", device: "", supportedCategories: [] });
-          toast.success("Successfully registered a new station.");
+          toast.success("Successfully updated station.");
         },
         onError: (err) => {
-          toast.error(`Failed to register station: ${err.message}`);
+          toast.error(`Failed to update station: ${err.message}`);
         },
       });
     }
@@ -109,10 +109,10 @@ export default function CreateStationForm({
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           {isEditMode ? (
-            <span className="h-6 w-6 flex items-center justify-center rounded-md bg-amber-50 text-amber-600">
+            <span className="h-6 w-6 flex items-center justify-center rounded-md bg-amber-60 text-amber-800">
               <Pencil size={13} />
             </span>
-          ) : (
+          ) : ( 
             <span className="h-6 w-6 flex items-center justify-center rounded-md bg-slate-100 text-slate-500">
               <Radio size={13} />
             </span>
@@ -125,7 +125,7 @@ export default function CreateStationForm({
           <button
             type="button"
             onClick={onCancelEdit}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
           >
             <X size={13} /> Cancel
           </button>

@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Film,
   Image as ImageIcon,
+  Pencil,
 } from "lucide-react";
 import { useFetchSchedules } from "@/src/hooks/use-schedules";
 import { ScheduleResponse } from "@/src/types/interfaces";
@@ -146,7 +147,14 @@ function deriveCdnShort(url: string): string {
 }
 
 // Main component
-export default function SchedulesList() {
+interface ScheduleListProps {
+  onEdit: (schedule: ScheduleResponse) => void;
+  editTargetId: string | null;
+}
+export default function SchedulesList({
+  onEdit,
+  editTargetId,
+}: ScheduleListProps) {
   const { data, isLoading, isError } = useFetchSchedules();
   const [page, setPage] = useState(0);
 
@@ -184,7 +192,7 @@ export default function SchedulesList() {
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[2fr_1.4fr_3rem_5rem_5rem] gap-x-4 items-center px-5 py-2.5 border-b border-slate-100 bg-slate-50">
+      <div className="grid grid-cols-[2fr_1.4fr_3rem_5rem_3rem_2rem] gap-x-4 items-center px-5 py-2.5 border-b border-slate-100 bg-slate-50">
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Media
         </span>
@@ -197,8 +205,11 @@ export default function SchedulesList() {
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-20">
           Category
         </span>
-         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-20">
+        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-20">
           Status
+        </span>
+        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-20">
+          Edit
         </span>
       </div>
 
@@ -218,6 +229,7 @@ export default function SchedulesList() {
               <div className="h-3 w-20 bg-slate-100 rounded" />
               <div className="h-7 w-7 bg-slate-100 rounded-md" />
               <div className="h-3 w-16 bg-slate-100 rounded" />
+              <div className="h-3 w-16 bg-slate-100 rounded" />
             </div>
           ))}
 
@@ -235,50 +247,73 @@ export default function SchedulesList() {
 
         {!isLoading &&
           !isError &&
-          paged.map((schedule) => (
-            <div
-              key={schedule.id}
-              className="grid grid-cols-[2fr_1.4fr_3rem_5rem_5rem] gap-x-4 items-center px-5 py-3.5 hover:bg-slate-50/70 transition-colors"
-            >
-              {/* Media */}
-              <div className="flex items-center gap-3 min-w-0 cursor-pointer">
-                <MediaThumbnail
-                  url={schedule.mediaUrl}
-                  type={schedule.mediaType}
-                />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-700 truncate leading-tight">
-                    {deriveMediaName(schedule.mediaUrl)}
-                  </p>
-                  <p className="text-[11px] text-slate-400 truncate mt-0.5 font-mono">
-                    {deriveCdnShort(schedule.mediaUrl)}
-                  </p>
+          paged.map((schedule) => {
+            const isBeingEdited = editTargetId === schedule.id;
+
+            return (
+              <div
+                key={schedule.id}
+                className={`grid grid-cols-[2fr_1.4fr_3rem_5rem_3rem_2rem] gap-x-4 items-center px-5 py-3.5 transition-colors  ${
+                  isBeingEdited
+                    ? "bg-amber-50/60 border-l-2 border-l-amber-400"
+                    : "hover:bg-slate-50/70"
+                }`}
+              >
+                {/* Media */}
+                <div className="flex items-center gap-3 min-w-0 cursor-pointer">
+                  <MediaThumbnail
+                    url={schedule.mediaUrl}
+                    type={schedule.mediaType}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate leading-tight">
+                      {deriveMediaName(schedule.mediaUrl)}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5 font-mono">
+                      {deriveCdnShort(schedule.mediaUrl)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Timing */}
+                <TimingCell schedule={schedule} />
+
+                {/* Priority */}
+                <div className="w-12 flex justify-center">
+                  <PriorityBadge value={schedule.priority} />
+                </div>
+
+                {/* Category */}
+                <div className="w-20">
+                  <span className="text-xs text-slate-600 capitalize">
+                    {schedule.category}
+                  </span>
+                </div>
+
+                {/* Status */}
+                <div className="w-20">
+                  <span className="text-xs text-green-500 capitalize">
+                    {schedule.status}
+                  </span>
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(schedule)}
+                    title="Edit station"
+                    className={`h-7 w-7 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
+                      isBeingEdited
+                        ? "bg-amber-100 border-amber-200 text-amber-600"
+                        : "border-slate-400 text-slate-400 hover:border-slate-600 hover:text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Pencil size={12} className="cursor-pointer" />
+                  </button>
                 </div>
               </div>
-
-              {/* Timing */}
-              <TimingCell schedule={schedule} />
-
-              {/* Priority */}
-              <div className="w-12 flex justify-center">
-                <PriorityBadge value={schedule.priority} />
-              </div>
-
-              {/* Category */}
-              <div className="w-20">
-                <span className="text-xs text-slate-600 capitalize">
-                  {schedule.category}
-                </span>
-              </div>
-
-              {/* Status */}
-              <div className="w-20">
-                <span className="text-xs text-green-500 capitalize">
-                  {schedule.status}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
 
       {/* Footer / Pagination */}

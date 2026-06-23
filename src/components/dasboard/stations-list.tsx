@@ -205,13 +205,13 @@ export default function StationsList({
                     type="button"
                     onClick={() => onEdit(station)}
                     title="Edit station"
-                    className={`h-7 w-7 flex items-center justify-center rounded-md border transition-colors ${
+                    className={`h-7 w-7 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
                       isBeingEdited
-                        ? "bg-amber-100 border-amber-300 text-amber-600"
-                        : "border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-slate-50"
+                        ? "bg-amber-100 border-amber-200 text-amber-600"
+                        : "border-slate-400 text-slate-400 hover:border-slate-600 hover:text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <Pencil size={12} className="cursor-pointer" />
+                    <Pencil size={12} className="" />
                   </button>
                 </div>
               </div>

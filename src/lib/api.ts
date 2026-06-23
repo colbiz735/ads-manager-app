@@ -62,7 +62,7 @@ export const apiService = {
       return;
     }
     const response = await fetch(
-      `${API_BASE_URL}/v1/ads/update-station/${station.id}`,
+      `${API_BASE_URL}/v1/ads/update-station/?id=${station.id}`,
       {
         method: "PUT",
         headers: {
@@ -142,6 +142,36 @@ export const apiService = {
       throw new Error(
         errorData.message ||
           `Failed to create schedule: ${response.statusText}`,
+      );
+    }
+
+    const result = await response.json();
+    return result?.data;
+  },
+
+  /**
+   * Dispatches the structured DTO payload to register a brand-new broadcast pipeline
+   */
+  async updateSchedule(
+    editTarget: ScheduleResponse | null,
+    dto: CreateScheduleDto,
+  ): Promise<ScheduleResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/v1/ads/update-schedule?id=${editTarget?.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dto),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to update schedule: ${response.statusText}`,
       );
     }
 

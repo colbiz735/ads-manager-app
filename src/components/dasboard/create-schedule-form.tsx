@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray, Controller, set } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import {
   UploadCloud,
   Film,
@@ -15,26 +15,36 @@ import {
   ToggleLeft,
   ArrowRight,
   X,
+  Pencil,
+  Radio,
 } from "lucide-react";
 import {
   DEFAULT_AD_CATEGORIES,
   OwnershipType,
   Weekday,
 } from "@/src/types/enums";
-import { CreateScheduleDto, MediaType } from "@/src/types/interfaces";
+import {
+  CreateScheduleDto,
+  MediaType,
+  ScheduleResponse,
+} from "@/src/types/interfaces";
 import {
   SCHEDULE_KEYS,
   useCreateSchedule,
+  useUpdateSchedule,
   useUploadMedia,
 } from "@/src/hooks/use-schedules";
 import { toast } from "react-toastify";
-import { defaultCreateSchedule } from "@/src/lib/constants";
+import { defaultCreateSchedule, fillEditTarget } from "@/src/lib/constants";
 import { apiService } from "@/src/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFetchStations } from "@/src/hooks/use-stations";
 
 interface CreateScheduleFormProps {
   onSuccess: () => void;
+  editTarget: ScheduleResponse | null;
+  setEditTarget: React.Dispatch<React.SetStateAction<ScheduleResponse | null>>;
+  onCancelEdit: () => void;
 }
 
 // Helper: required field label asterisk
@@ -46,7 +56,12 @@ const FieldError = ({ message }: { message?: string }) =>
 
 export default function CreateScheduleForm({
   onSuccess,
+  editTarget,
+  setEditTarget,
+  onCancelEdit,
 }: CreateScheduleFormProps) {
+  const isEditMode = !!editTarget;
+
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<{
@@ -54,7 +69,7 @@ export default function CreateScheduleForm({
     mediaId: string;
     mediaType: MediaType;
   } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingMedia, setIsDeletingMedia] = useState(false);
 
   const {
     register,
@@ -90,10 +105,14 @@ export default function CreateScheduleForm({
 
   // Instantiate hook modules
   const { data: stationList = [] } = useFetchStations();
-  const uploadMediaMutation = useUploadMedia();
 
   const queryClient = useQueryClient();
+
+  const uploadMediaMutation = useUploadMedia();
   const createScheduleMutation = useCreateSchedule();
+  const updateScheduleMutation = useUpdateSchedule(onCancelEdit, editTarget);
+  const isPending =
+    createScheduleMutation.isPending || updateScheduleMutation.isPending;
 
   // Derive available categories based on station selection
   const activeSelectedStation = stationList.find(
@@ -103,6 +122,15 @@ export default function CreateScheduleForm({
     selectedStationId && activeSelectedStation
       ? activeSelectedStation.supportedCategories
       : DEFAULT_AD_CATEGORIES;
+
+  // Prefill when an edit target is injected
+  useEffect(() => {
+    if (editTarget) {
+      reset(fillEditTarget(editTarget));
+    } else {
+      reset();
+    }
+  }, [editTarget, reset]);
 
   // Reset category whenever the station changes so the user explicitly picks one
   useEffect(() => {
@@ -146,7 +174,7 @@ export default function CreateScheduleForm({
   // Clear uploaded media
   const handleClearMedia = async () => {
     if (uploadedMedia) {
-      setIsDeleting(true);
+      setIsDeletingMedia(true);
 
       try {
         await apiService.deleteMedia(
@@ -159,9 +187,9 @@ export default function CreateScheduleForm({
         setValue("mediaType", "" as MediaType);
         setValue("mediaId", "" as MediaType);
         clearErrors("mediaUrl");
-        setIsDeleting(false);
+        setIsDeletingMedia(false);
       } catch (error) {
-        setIsDeleting(false);
+        setIsDeletingMedia(false);
         toast.error("Failed to delete campaign media asset. Please try again.");
       }
     }
@@ -170,7 +198,8 @@ export default function CreateScheduleForm({
   // Before RHF validation runs, manually validate the media upload since it's
   // outside the form's register flow, then focus the first error field.
   const onSubmit = (data: CreateScheduleDto) => {
-    if (!uploadedMedia) {
+    console.log("data", data);
+    if (!uploadedMedia && !isEditMode) {
       setError("mediaUrl", {
         message: "Please upload a media file before submitting.",
       });
@@ -178,27 +207,40 @@ export default function CreateScheduleForm({
       return;
     }
 
-    createScheduleMutation.mutate(data, {
-      onSuccess: () => {
-        setUploadedMedia(null);
+    if (isEditMode) {
+      updateScheduleMutation.mutate(data, {
+        onSuccess: () => {
+          // Reset form fields
+          reset(defaultCreateSchedule);
+          setEditTarget(null);
+          setUploadedMedia(null);
 
-        // Reset form fields
-        reset(defaultCreateSchedule);
-        if (timeSlotFields.length > 1) {
-          timeSlotFields.forEach((_, i) => removeTimeSlot(i));
-        }
+          if (timeSlotFields.length > 1) {
+            timeSlotFields.forEach((_, i) => removeTimeSlot(i));
+          }
 
-        // Auto refresh schedule list
-        queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
-        setUploadedMedia(null);
+          toast.success("Updated successfully");
 
-        toast.success("Successfully scheduled a new broadcast.");
-        onSuccess();
-      },
-      onError: (err) => {
-        toast.error(`Failed to create schedule: ${err.message}`);
-      },
-    });
+          onSuccess();
+        },
+        onError: (err) => {
+          toast.error(`Failed to update schedule: ${err.message}`);
+        },
+      });
+    } else {
+      createScheduleMutation.mutate(data, {
+        onSuccess: () => {
+          // Reset form fields
+          reset(defaultCreateSchedule);
+          setUploadedMedia(null);
+
+          toast.success("Successfully scheduled a new broadcast.");
+        },
+        onError: (err) => {
+          toast.error(`Failed to scheduled a new broadcast.: ${err.message}`);
+        },
+      });
+    }
   };
 
   const onInvalid = (errs: typeof errors) => {
@@ -249,16 +291,32 @@ export default function CreateScheduleForm({
   const inputNormal = `${inputBase} border-slate-200 focus:border-slate-400 text-slate-700 bg-white cursor-pointer`;
   const inputError = `${inputBase} border-red-400 focus:border-red-500 text-slate-700 bg-white`;
 
+  const mediaType = uploadedMedia?.mediaType || editTarget?.mediaType;
   return (
     <div className="w-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden font-sans">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        {isEditMode ? (
+          <span className="h-6 w-6 flex items-center justify-center rounded-md bg-amber-60 text-amber-800">
+            <Pencil size={13} />
+          </span>
+        ) : (
+          <span className="h-6 w-6 flex items-center justify-center rounded-md bg-slate-100 text-slate-500">
+            <Radio size={13} />
+          </span>
+        )}
         <h2 className="text-sm font-semibold text-slate-800 tracking-tight">
-          New Schedule
+          {isEditMode ? "Edit Ads Schedule" : "New Ads Schedule"}
         </h2>
-        <span className="text-xs text-slate-400 font-mono">
-          ID: SCH-2024-001
-        </span>
+        {isEditMode && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          >
+            <X size={13} /> Cancel
+          </button>
+        )}
       </div>
 
       <div className="p-5 space-y-5">
@@ -268,7 +326,7 @@ export default function CreateScheduleForm({
             Media URL <Req />
           </label>
 
-          {!uploadedMedia ? (
+          {!uploadedMedia && !isEditMode ? (
             <>
               <button
                 type="button"
@@ -276,8 +334,9 @@ export default function CreateScheduleForm({
                 className={`w-full flex items-center gap-3 border rounded-lg px-3 py-2.5 bg-white hover:border-slate-300 transition-colors text-left cursor-pointer ${
                   errors.mediaUrl ? "border-red-400" : "border-slate-200"
                 }`}
+                title="Upload campaign media"
               >
-                <UploadCloud className="h-4 w-4 text-slate-800 shrink-0" />
+                <UploadCloud className="h-4 w-4 text-slate-800 shrink-0 cursor-pointer" />
                 <span className="text-sm text-slate-800">
                   Click to upload campaign creative
                 </span>
@@ -289,14 +348,14 @@ export default function CreateScheduleForm({
             <div className="flex items-center justify-between border border-emerald-200 bg-emerald-50/40 rounded-lg px-3 py-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="h-6 w-6 rounded bg-emerald-600 flex items-center justify-center text-white shrink-0">
-                  {uploadedMedia.mediaType === "video" ? (
+                  {mediaType === "video" ? (
                     <Film size={12} />
                   ) : (
                     <ImageIcon size={12} />
                   )}
                 </div>
 
-                {isDeleting ? (
+                {isDeletingMedia ? (
                   <div className="flex gap-2 items-center">
                     <span className="h-4 w-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin"></span>
                     <p className="text-xs font-medium text-slate-800 truncate">
@@ -305,23 +364,33 @@ export default function CreateScheduleForm({
                   </div>
                 ) : (
                   <div className="text-xs font-medium text-emerald-900 truncate  max-w-[200px] md:max-w-[400px]">
-                    {uploadedMedia.mediaUrl}
+                    {uploadedMedia?.mediaUrl || editTarget?.mediaUrl}
                   </div>
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleClearMedia()}
-                className="text-slate-400 hover:text-red-500 transition-colors ml-2 shrink-0 cursor-pointer"
-              >
-                <X size={14} />
-              </button>
+              {!isEditMode ? (
+                <button
+                  type="button"
+                  onClick={() => handleClearMedia()}
+                  className="text-slate-400 hover:text-red-500 transition-colors ml-2 shrink-0 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(true)}
+                  title="Change campaign media"
+                >
+                  <UploadCloud className="h-4 w-4 text-slate-800 shrink-0 cursor-pointer" />
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* ── Upload Modal ── */}
+        {/* Upload Modal */}
         {showUploadModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
@@ -381,10 +450,10 @@ export default function CreateScheduleForm({
           </div>
         )}
 
-        {/* ─── Create Schedule Form — gated on media upload */}
+        {/* Create Schedule Form — gated on media upload */}
         <form
           onSubmit={handleSubmit(onSubmit, onInvalid)}
-          className={`space-y-5 ${!uploadedMedia ? "opacity-40 pointer-events-none" : ""}`}
+          className={`space-y-5 ${!uploadedMedia && !isEditMode ? "opacity-40 pointer-events-none" : ""}`}
         >
           {/* Media Type (read-only) + Duration */}
           <div className="grid grid-cols-2 gap-4">
@@ -394,7 +463,7 @@ export default function CreateScheduleForm({
               </label>
               <input
                 readOnly
-                value={uploadedMedia?.mediaType ?? ""}
+                value={mediaType}
                 placeholder="Auto-detected on upload"
                 className="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-500 cursor-not-allowed capitalize"
               />
@@ -422,8 +491,8 @@ export default function CreateScheduleForm({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
-                <Calendar size={12} className="text-slate-400 cursor-pointer" /> Start Date{" "}
-                <Req />
+                <Calendar size={12} className="text-slate-400 cursor-pointer" />{" "}
+                Start Date <Req />
               </label>
               <input
                 type="date"
@@ -441,8 +510,8 @@ export default function CreateScheduleForm({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
-                <Calendar size={12} className="text-slate-400 cursor-pointer" /> End Date{" "}
-                <Req />
+                <Calendar size={12} className="text-slate-400 cursor-pointer" />{" "}
+                End Date <Req />
               </label>
               <input
                 type="date"
@@ -570,7 +639,7 @@ export default function CreateScheduleForm({
                   }
                   className="text-xs text-slate-500 font-medium hover:text-slate-700 flex items-center gap-0.5 transition-colors cursor-pointer"
                 >
-                  <Plus size={13} className="cursor-pointer"/> Add another slot
+                  <Plus size={13} className="cursor-pointer" /> Add another slot
                 </button>
               )}
             </div>
@@ -658,8 +727,10 @@ export default function CreateScheduleForm({
                 <option value="interval">Interval</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+            <div
+              className={`${watchedFrequencyType === "interval" ? "" : "opacity-50 pointer-events-none"}`}
+            >
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Interval Seconds{" "}
                 {watchedFrequencyType === "interval" && <Req />}
               </label>
@@ -676,6 +747,7 @@ export default function CreateScheduleForm({
                 className={
                   errors.frequency?.intervalSeconds ? inputError : inputNormal
                 }
+                title="Determines how often the schedule repeats. Required if Frequency is set to Interval."
               />
               <FieldError
                 message={errors.frequency?.intervalSeconds?.message}
@@ -807,12 +879,20 @@ export default function CreateScheduleForm({
           {/* Submit */}
           <button
             type="submit"
-            disabled={createScheduleMutation.isPending}
-            className="w-full mt-1 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-semibold text-sm py-3 px-4 rounded-lg transition-colors cursor-pointer"
+            disabled={isPending}
+            className={`w-full font-semibold text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer text-white disabled:opacity-50 ${
+              isEditMode
+                ? "bg-amber-600 hover:bg-amber-700"
+                : "bg-slate-900 hover:bg-slate-800"
+            }`}
           >
-            {createScheduleMutation.isPending
-              ? "Publishing..."
-              : "Create Schedule"}
+            {isPending
+              ? isEditMode
+                ? "Saving changes..."
+                : "Publishing..."
+              : isEditMode
+                ? "Save Changes"
+                : "Create Schedule"}
           </button>
         </form>
       </div>

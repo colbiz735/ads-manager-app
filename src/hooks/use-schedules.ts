@@ -1,7 +1,7 @@
 // src/hooks/use-schedules.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "../lib/api";
-import { CreateScheduleDto } from "../types/interfaces";
+import { CreateScheduleDto, ScheduleResponse } from "../types/interfaces";
 
 // Centralized cache keys
 export const SCHEDULE_KEYS = {
@@ -39,6 +39,25 @@ export function useCreateSchedule() {
       // Automatic invalidation tells TanStack Query to refresh the list
       // immediately upon successful schedule creation.
       queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
+    },
+  });
+}
+
+/**
+ * Hook to update a schedule
+ */
+export function useUpdateSchedule(
+  onCancelEdit: () => void,
+  editTarget: ScheduleResponse | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateScheduleDto) =>
+      apiService.updateSchedule(editTarget, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
+      onCancelEdit();
     },
   });
 }
