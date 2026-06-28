@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useFetchSchedules } from "@/src/hooks/use-schedules";
 import { ScheduleResponse } from "@/src/types/interfaces";
+import SchedulePreviewModal from "./schedule-preview-modal";
 
 const PAGE_SIZE = 20;
 
@@ -157,6 +158,7 @@ export default function SchedulesList({
 }: ScheduleListProps) {
   const { data, isLoading, isError } = useFetchSchedules();
   const [page, setPage] = useState(0);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const schedules: ScheduleResponse[] = data ?? [];
   const totalPages = Math.ceil(schedules.length / PAGE_SIZE);
@@ -260,7 +262,10 @@ export default function SchedulesList({
                 }`}
               >
                 {/* Media */}
-                <div className="flex items-center gap-3 min-w-0 cursor-pointer">
+                <div
+                  className="flex items-center gap-3 min-w-0 cursor-pointer"
+                  onClick={() => setPreviewIndex(schedules.indexOf(schedule))}
+                >
                   <MediaThumbnail
                     url={schedule.mediaUrl}
                     type={schedule.mediaType}
@@ -348,6 +353,16 @@ export default function SchedulesList({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewIndex !== null && (
+        <SchedulePreviewModal
+          schedules={schedules}
+          initialIndex={previewIndex}
+          open={previewIndex !== null}
+          onOpenChange={(o) => !o && setPreviewIndex(null)}
+        />
       )}
     </div>
   );

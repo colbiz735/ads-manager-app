@@ -21,15 +21,16 @@ import {
 import {
   DEFAULT_AD_CATEGORIES,
   OwnershipType,
-  Weekday,
+  Weekdays,
 } from "@/src/types/enums";
 import {
   CreateScheduleDto,
   MediaType,
   ScheduleResponse,
+  Weekday,
+  WEEKDAY_LABELS,
 } from "@/src/types/interfaces";
 import {
-  SCHEDULE_KEYS,
   useCreateSchedule,
   useUpdateSchedule,
   useUploadMedia,
@@ -37,7 +38,6 @@ import {
 import { toast } from "react-toastify";
 import { defaultCreateSchedule, fillEditTarget } from "@/src/lib/constants";
 import { apiService } from "@/src/lib/api";
-import { useQueryClient } from "@tanstack/react-query";
 import { useFetchStations } from "@/src/hooks/use-stations";
 
 interface CreateScheduleFormProps {
@@ -106,7 +106,6 @@ export default function CreateScheduleForm({
   // Instantiate hook modules
   const { data: stationList = [] } = useFetchStations();
 
-  const queryClient = useQueryClient();
 
   const uploadMediaMutation = useUploadMedia();
   const createScheduleMutation = useCreateSchedule();
@@ -275,16 +274,6 @@ export default function CreateScheduleForm({
       : [...watchedWeekdays, day];
     setValue("weekdays", updated);
   };
-
-  const WEEKDAY_LABELS: { value: Weekday; label: string }[] = [
-    { value: Weekday.MONDAY, label: "Mon" },
-    { value: Weekday.TUESDAY, label: "Tue" },
-    { value: Weekday.WEDNESDAY, label: "Wed" },
-    { value: Weekday.THURSDAY, label: "Thu" },
-    { value: Weekday.FRIDAY, label: "Fri" },
-    { value: Weekday.SATURDAY, label: "Sat" },
-    { value: Weekday.SUNDAY, label: "Sun" },
-  ];
 
   const inputBase =
     "w-full text-sm border rounded-lg px-3 py-2 outline-none transition-colors";

@@ -1,4 +1,4 @@
-import { AdCategory } from "./enums";
+import { AdCategory, Weekdays } from "./enums";
 
 export type MediaType = "image" | "video" | "audio" | string;
 
@@ -84,3 +84,13 @@ export interface ScheduleResponse {
   created_at: string; // ISO Date String
   updated_at: string; // ISO Date String
 }
+
+  export const WEEKDAY_LABELS: { value: Weekday; label: string }[] = [
+    { value: Weekdays.MONDAY, label: "Mon" },
+    { value: Weekdays.TUESDAY, label: "Tue" },
+    { value: Weekdays.WEDNESDAY, label: "Wed" },
+    { value: Weekdays.THURSDAY, label: "Thu" },
+    { value: Weekdays.FRIDAY, label: "Fri" },
+    { value: Weekdays.SATURDAY, label: "Sat" },
+    { value: Weekdays.SUNDAY, label: "Sun" },
+  ];

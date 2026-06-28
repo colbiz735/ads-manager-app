@@ -3,7 +3,7 @@ export enum MediaType {
   VIDEO = "VIDEO",
 }
 
-export enum Weekday {
+export enum Weekdays {
   MONDAY = "monday",
   TUESDAY = "tuesday",
   WEDNESDAY = "wednesday",
