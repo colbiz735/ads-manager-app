@@ -1,4 +1,4 @@
-import { AdCategory, Weekdays } from "./enums";
+import { AdCategory, ScheduleStatus, StationStatus, Weekdays } from "./enums";
 
 export type MediaType = "image" | "video" | "audio" | string;
 
@@ -11,7 +11,7 @@ export type Weekday =
   | "friday"
   | "saturday";
 
-export type ScheduleStatus = "active" | "inactive" | "paused";
+export type ScheduleStatusType = ScheduleStatus | "inactive";
 
 export interface TimeSlot {
   start: string; // HH:mm format
@@ -30,13 +30,14 @@ export interface CreateStationDto {
   address: string;
   device: string;
   supportedCategories: AdCategory[];
+  status?: StationStatus;
 }
 
 export interface StationResponse {
   id: string;
   name: string;
   address: string;
-  status: string;
+  status: StationStatus | string;
   healthStatus: string;
   device: string;
   supportedCategories: AdCategory[];
@@ -60,7 +61,7 @@ export interface CreateScheduleDto {
   tags: string[];
   locationIds: string[];
   ownership: OwnershipType;
-  status: ScheduleStatus;
+  status: ScheduleStatusType;
 }
 
 export interface ScheduleResponse {
@@ -79,7 +80,7 @@ export interface ScheduleResponse {
   category: AdCategory;
   tags: string[];
   ownership: OwnershipType;
-  status: ScheduleStatus;
+  status: ScheduleStatusType;
   locationIds: string[];
   created_at: string; // ISO Date String
   updated_at: string; // ISO Date String

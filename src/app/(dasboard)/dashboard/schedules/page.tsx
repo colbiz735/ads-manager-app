@@ -39,7 +39,7 @@ export default function SchedulesPage() {
           <CreateScheduleForm
             onSuccess={() =>
               queryClient.invalidateQueries({
-                queryKey: ["schedules-dashboard-list"],
+                queryKey: ["schedules-list"],
               })
             }
             editTarget={editTarget}

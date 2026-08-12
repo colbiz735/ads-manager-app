@@ -20,8 +20,21 @@ export enum OwnershipType {
 
 export enum ScheduleStatus {
   ACTIVE = "active",
-  DRAFT = "draft",
   PAUSED = "paused",
+  SUSPENDED = "suspended",
+  // CANCELLED = "cancelled",
+}
+
+export enum StationStatus {
+  APPROVED = "approved",
+  SUSPENDED = "suspended",
+  BLOCKED = "blocked",
+  UNDER_REVIEW = "under-review",
+}
+
+export enum StationHealthStatus {
+  ACTIVE = "active",
+  IN_ACTIVE = "inactive",
 }
 
 export enum AdCategory {

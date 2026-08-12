@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "../lib/api";
+import { stationToDto } from "../lib/mappers";
 import { CreateStationDto, StationResponse } from "../types/interfaces";
+import { StationStatus } from "../types/enums";
 
 export const STATION_KEYS = {
   stations: ["stations"] as const,
@@ -47,6 +49,44 @@ export function useUpdateStation(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
       onCancelEdit();
+    },
+  });
+}
+
+/**
+ * Hook to delete a station
+ */
+export function useDeleteStation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiService.deleteStation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
+    },
+  });
+}
+
+/**
+ * Hook to update station status
+ */
+export function useUpdateStationStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      station,
+      status,
+    }: {
+      station: StationResponse;
+      status: StationStatus;
+    }) =>
+      apiService.updateStation(station, {
+        ...stationToDto(station),
+        status,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
     },
   });
 }

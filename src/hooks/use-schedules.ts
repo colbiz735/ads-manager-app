@@ -1,7 +1,9 @@
 // src/hooks/use-schedules.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "../lib/api";
+import { scheduleToDto } from "../lib/mappers";
 import { CreateScheduleDto, ScheduleResponse } from "../types/interfaces";
+import { ScheduleStatus } from "../types/enums";
 
 // Centralized cache keys
 export const SCHEDULE_KEYS = {
@@ -58,6 +60,44 @@ export function useUpdateSchedule(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
       onCancelEdit();
+    },
+  });
+}
+
+/**
+ * Hook to delete a schedule
+ */
+export function useDeleteSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiService.deleteSchedule(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
+    },
+  });
+}
+
+/**
+ * Hook to update schedule status
+ */
+export function useUpdateScheduleStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      schedule,
+      status,
+    }: {
+      schedule: ScheduleResponse;
+      status: ScheduleStatus;
+    }) =>
+      apiService.updateSchedule(schedule, {
+        ...scheduleToDto(schedule),
+        status,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SCHEDULE_KEYS.schedules });
     },
   });
 }

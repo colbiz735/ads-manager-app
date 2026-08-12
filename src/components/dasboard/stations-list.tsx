@@ -1,38 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  Search,
   ChevronLeft,
   ChevronRight,
   Pencil,
-  Wifi,
-  WifiOff,
+  MoreHorizontal,
+  Eye,
+  Trash2,
   Server,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { StationResponse } from "@/src/types/interfaces";
-import { useFetchStations } from "@/src/hooks/use-stations";
+import {
+  useDeleteStation,
+  useFetchStations,
+  useUpdateStationStatus,
+} from "@/src/hooks/use-stations";
+import { ALL_STATION_STATUSES } from "@/src/lib/status-styles";
+import { StationStatus } from "@/src/types/enums";
+import { StatusBadge } from "./status-badge";
+import StationPreviewModal from "./station-preview-modal";
+import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+import { toast } from "react-toastify";
 
 const PAGE_SIZE = 20;
-
-function StatusPill({ status, health }: { status: string; health: string }) {
-  const isActive = health === "active";
-  return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-          isActive ? "bg-emerald-500" : "bg-slate-300"
-        }`}
-      />
-      <span
-        className={`text-[11px] font-medium capitalize ${
-          isActive ? "text-emerald-600" : "text-slate-400"
-        }`}
-      >
-        {health}
-      </span>
-    </div>
-  );
-}
 
 function CategoryChips({ categories }: { categories: string[] }) {
   const visible = categories.slice(0, 2);
@@ -44,7 +55,7 @@ function CategoryChips({ categories }: { categories: string[] }) {
           key={cat}
           className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize"
         >
-          {cat}
+          {cat.replace(/_/g, " ")}
         </span>
       ))}
       {overflow > 0 && (
@@ -66,39 +77,121 @@ export default function StationsList({
   editTargetId,
 }: StationsListProps) {
   const { data, isLoading, isError } = useFetchStations();
+  const deleteMutation = useDeleteStation();
+  const statusMutation = useUpdateStationStatus();
+
   const [page, setPage] = useState(0);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteTarget, setDeleteTarget] = useState<StationResponse | null>(null);
 
   const stations: StationResponse[] = data ?? [];
-  const totalPages = Math.ceil(stations.length / PAGE_SIZE);
-  const paged = stations.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  const filtered = useMemo(() => {
+    return stations.filter((s) => {
+      const matchesSearch =
+        !search ||
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.address?.toLowerCase().includes(search.toLowerCase()) ||
+        s.device?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" || s.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [stations, search, statusFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   const handlePrev = () => setPage((p) => Math.max(0, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages - 1, p + 1));
 
+  const handleStatusChange = async (
+    station: StationResponse,
+    status: StationStatus,
+  ) => {
+    try {
+      await statusMutation.mutateAsync({ station, status });
+      toast.success(`Station status updated to ${status.replace(/-/g, " ")}`);
+    } catch {
+      toast.error("Failed to update station status");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(`"${deleteTarget.name}" has been deleted`);
+      setDeleteTarget(null);
+    } catch {
+      toast.error("Failed to delete station");
+    }
+  };
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden font-sans flex flex-col">
       {/* Header */}
-      <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100">
+      <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold text-slate-800 tracking-tight">
             Registered Stations
           </h2>
           <p className="text-[11px] text-slate-400 mt-0.5">
+            <span className="font-medium text-slate-500">{filtered.length}</span>{" "}
+            of{" "}
             <span className="font-medium text-slate-500">
               {stations.length}
             </span>{" "}
-            station{stations.length !== 1 ? "s" : ""} registered in the network
+            station{stations.length !== 1 ? "s" : ""} in the network
           </p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400">
-            <Server size={14} />
-          </span>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <Input
+              placeholder="Search stations…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+              className="h-8 w-full sm:w-44 pl-8 text-xs border-slate-200"
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger
+              size="sm"
+              className="h-8 w-[130px] text-xs border-slate-200"
+            >
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {ALL_STATION_STATUSES.map((s) => (
+                <SelectItem key={s} value={s} className="capitalize">
+                  {s.replace(/-/g, " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[2fr_1.2fr_1.4fr_5rem_2.5rem] gap-x-4 items-center px-5 py-2.5 border-b border-slate-100 bg-slate-50">
+      <div className="hidden sm:grid grid-cols-[2fr_1.2fr_1.4fr_6rem_5rem_5rem] gap-x-4 items-center px-5 py-2.5 border-b border-slate-100 bg-slate-50">
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Station
         </span>
@@ -111,31 +204,29 @@ export default function StationsList({
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Status
         </span>
+         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+          Health Status
+        </span>
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">
-          Edit
+          Actions
         </span>
       </div>
 
       {/* Body */}
       <div className="divide-y divide-slate-100 flex-1">
-        {/* Loading skeletons */}
         {isLoading &&
           Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="grid grid-cols-[2fr_1.2fr_1.4fr_5rem_2.5rem] gap-x-4 items-center px-5 py-3.5 animate-pulse"
+              className="flex items-center gap-4 px-5 py-3.5 animate-pulse"
             >
-              <div className="space-y-1.5">
+              <div className="h-10 w-10 rounded-lg bg-slate-100 shrink-0" />
+              <div className="flex-1 space-y-2">
                 <div className="h-3 w-28 bg-slate-100 rounded" />
                 <div className="h-2.5 w-20 bg-slate-100 rounded" />
               </div>
               <div className="h-3 w-16 bg-slate-100 rounded" />
-              <div className="flex gap-1">
-                <div className="h-4 w-14 bg-slate-100 rounded-full" />
-                <div className="h-4 w-14 bg-slate-100 rounded-full" />
-              </div>
-              <div className="h-3 w-12 bg-slate-100 rounded" />
-              <div className="h-6 w-6 bg-slate-100 rounded-md mx-auto" />
+              <div className="h-5 w-20 bg-slate-100 rounded-full" />
             </div>
           ))}
 
@@ -147,9 +238,11 @@ export default function StationsList({
 
         {!isLoading && !isError && paged.length === 0 && (
           <div className="flex flex-col items-center justify-center py-14 gap-2">
-            <Wifi size={28} className="text-slate-200" />
+            <Server size={28} className="text-slate-200" />
             <p className="text-sm text-slate-400">
-              No stations registered yet.
+              {search || statusFilter !== "all"
+                ? "No stations match your filters."
+                : "No stations registered yet."}
             </p>
           </div>
         )}
@@ -158,18 +251,23 @@ export default function StationsList({
           !isError &&
           paged.map((station) => {
             const isBeingEdited = editTargetId === station.id;
+            const globalIndex = stations.indexOf(station);
+
             return (
               <div
                 key={station.id}
-                className={`grid grid-cols-[2fr_1.2fr_1.4fr_5rem_2.5rem] gap-x-4 items-center px-5 py-3.5 transition-colors ${
+                className={`flex flex-col gap-2 px-5 py-3.5 transition-colors sm:grid sm:grid-cols-[2fr_1.2fr_1.4fr_6rem_5rem_5rem] sm:gap-x-4 sm:items-center ${
                   isBeingEdited
                     ? "bg-amber-50/60 border-l-2 border-l-amber-400"
                     : "hover:bg-slate-50/70"
                 }`}
               >
                 {/* Station name + address */}
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-700 truncate leading-tight">
+                <div
+                  className="min-w-0 cursor-pointer"
+                  onClick={() => setPreviewIndex(globalIndex)}
+                >
+                  <p className="text-xs font-semibold text-slate-700 truncate leading-tight hover:text-slate-900">
                     {station.name}
                   </p>
                   {station.address && (
@@ -180,39 +278,97 @@ export default function StationsList({
                 </div>
 
                 {/* Device */}
-                <div className="min-w-0">
+                <div className="min-w-0 hidden sm:block">
                   <span className="text-xs text-slate-600 font-mono truncate block">
                     {station.device || (
-                      <span className="text-slate-300 not-italic font-sans">
-                        —
-                      </span>
+                      <span className="text-slate-300 font-sans">—</span>
                     )}
                   </span>
                 </div>
 
                 {/* Categories */}
-                <CategoryChips categories={station.supportedCategories} />
+                <div className="hidden sm:block">
+                  <CategoryChips categories={station.supportedCategories} />
+                </div>
 
                 {/* Status */}
-                <StatusPill
-                  status={station.status}
-                  health={station.healthStatus}
-                />
+                <div>
+                  <StatusBadge status={station.status} type="station" />
+                </div>
 
-                {/* Edit button */}
-                <div className="flex justify-center">
-                  <button
-                    type="button"
+                {/* Health Status */}
+                <div>
+                  <StatusBadge status={station.healthStatus} type="station" />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end sm:justify-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => onEdit(station)}
                     title="Edit station"
-                    className={`h-7 w-7 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
+                    className={`h-7 w-7 ${
                       isBeingEdited
-                        ? "bg-amber-100 border-amber-200 text-amber-600"
-                        : "border-slate-400 text-slate-400 hover:border-slate-600 hover:text-slate-600 hover:bg-slate-50"
+                        ? "bg-amber-100 text-amber-600"
+                        : "text-slate-400 hover:text-slate-600"
                     }`}
                   >
-                    <Pencil size={12} className="" />
-                  </button>
+                    <Pencil size={12} />
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="h-7 w-7 text-slate-400 hover:text-slate-600"
+                      >
+                        <MoreHorizontal size={14} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem
+                        onClick={() => setPreviewIndex(globalIndex)}
+                      >
+                        <Eye size={14} />
+                        Preview
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(station)}>
+                        <Pencil size={14} />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          Change status
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          {ALL_STATION_STATUSES.map((s) => (
+                            <DropdownMenuItem
+                              key={s}
+                              onClick={() => handleStatusChange(station, s)}
+                              className="capitalize"
+                            >
+                              {s.replace(/-/g, " ")}
+                              {station.status === s && (
+                                <span className="ml-auto text-emerald-500">
+                                  ✓
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setDeleteTarget(station)}
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             );
@@ -220,17 +376,17 @@ export default function StationsList({
       </div>
 
       {/* Footer / Pagination */}
-      {!isLoading && stations.length > PAGE_SIZE && (
+      {!isLoading && filtered.length > 0 && (
         <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-white">
           <p className="text-[11px] text-slate-400">
             Showing{" "}
             <span className="font-medium text-slate-600">
               {page * PAGE_SIZE + 1}–
-              {Math.min((page + 1) * PAGE_SIZE, stations.length)}
+              {Math.min((page + 1) * PAGE_SIZE, filtered.length)}
             </span>{" "}
             of{" "}
             <span className="font-medium text-slate-600">
-              {stations.length}
+              {filtered.length}
             </span>{" "}
             stations
           </p>
@@ -252,6 +408,24 @@ export default function StationsList({
           </div>
         </div>
       )}
+
+      {previewIndex !== null && (
+        <StationPreviewModal
+          stations={stations}
+          initialIndex={previewIndex}
+          open={previewIndex !== null}
+          onOpenChange={(o) => !o && setPreviewIndex(null)}
+        />
+      )}
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        resourceType="station"
+        resourceName={deleteTarget?.name ?? ""}
+        isDeleting={deleteMutation.isPending}
+      />
     </div>
   );
 }

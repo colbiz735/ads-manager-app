@@ -26,10 +26,11 @@ import {
   Copy,
   Check,
   Globe,
-  LucideIcon,
 } from "lucide-react";
-import { ScheduleResponse, WEEKDAY_LABELS } from "@/src/types/interfaces";
 import Image from "next/image";
+import { ScheduleResponse, WEEKDAY_LABELS } from "@/src/types/interfaces";
+import { Chip, fmtDate, SectionLabel } from "./preview-shared";
+import { StatusBadge } from "./status-badge";
 
 function deriveMediaName(url: string): string {
   try {
@@ -41,56 +42,11 @@ function deriveMediaName(url: string): string {
   }
 }
 
-function fmtDate(iso?: string) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function fmtVideoTime(seconds: number) {
   if (!isFinite(seconds) || seconds < 0) return "0:00";
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function SectionLabel({
-  icon: Icon,
-  children,
-}: {
-  icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 mb-2">
-      <Icon size={12} className="text-slate-400" />
-      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-        {children}
-      </span>
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  children,
-}: {
-  active?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={`text-[11px] font-medium px-2.5 py-1 rounded-full capitalize ${
-        active ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500"
-      }`}
-    >
-      {children}
-    </span>
-  );
 }
 
 interface SchedulePreviewModalProps {
@@ -162,7 +118,6 @@ export default function SchedulePreviewModal({
   const isVideo = schedule.mediaType === "video";
   const weekdays = schedule.weekdays ?? [];
   const allDays = weekdays.length === 0;
-  const isActive = schedule.status === "active";
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -325,16 +280,7 @@ export default function SchedulePreviewModal({
                 <h2 className="text-sm font-semibold text-slate-800 truncate">
                   {deriveMediaName(schedule.mediaUrl)}
                 </h2>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-300"}`}
-                  />
-                  <span
-                    className={`text-[11px] font-medium capitalize ${isActive ? "text-emerald-600" : "text-slate-400"}`}
-                  >
-                    {schedule.status}
-                  </span>
-                </div>
+                <StatusBadge status={schedule.status} type="schedule" />
               </div>
               <button
                 onClick={handleCopyUrl}

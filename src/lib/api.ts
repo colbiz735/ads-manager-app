@@ -6,7 +6,7 @@ import {
   CreateStationDto,
 } from "../types/interfaces";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const apiService = {
   /**
@@ -196,5 +196,42 @@ export const apiService = {
 
     const result = await response.json();
     return result.data;
+  },
+
+  /**
+   * Delete a station by ID
+   */
+  async deleteStation(id: string): Promise<boolean> {
+    const response = await fetch(
+      `${API_BASE_URL}/v1/ads/delete-station/?id=${id}`,
+      { method: "DELETE" },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `Failed to delete station: ${response.statusText}`,
+      );
+    }
+    return true;
+  },
+
+  /**
+   * Delete a schedule by ID
+   */
+  async deleteSchedule(id: string): Promise<boolean> {
+    const response = await fetch(
+      `${API_BASE_URL}/v1/ads/delete-schedule/?id=${id}`,
+      { method: "DELETE" },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to delete schedule: ${response.statusText}`,
+      );
+    }
+    return true;
   },
 };
