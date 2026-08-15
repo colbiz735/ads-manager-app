@@ -10,6 +10,9 @@ import {
   Eye,
   Trash2,
   Server,
+  Tv,
+  Radio,
+  RefreshCcw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,6 +38,9 @@ import {
   useDeleteStation,
   useFetchStations,
   useUpdateStationStatus,
+  useTrackStation,
+  useRefreshStation,
+  useCheckStationActiveness,
 } from "@/src/hooks/use-stations";
 import { ALL_STATION_STATUSES } from "@/src/lib/status-styles";
 import { StationStatus } from "@/src/types/enums";
@@ -42,6 +48,7 @@ import { StatusBadge } from "./status-badge";
 import StationPreviewModal from "./station-preview-modal";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { toast } from "react-toastify";
+import { useDashboardState } from "@/src/app/context/dashboard-state-context";
 
 const PAGE_SIZE = 20;
 
@@ -70,21 +77,30 @@ function CategoryChips({ categories }: { categories: string[] }) {
 interface StationsListProps {
   onEdit: (station: StationResponse) => void;
   editTargetId: string | null;
+  onCancelEdit: () => void;
 }
 
 export default function StationsList({
   onEdit,
   editTargetId,
+  onCancelEdit,
 }: StationsListProps) {
   const { data, isLoading, isError } = useFetchStations();
+  const { clientTracker: client } = useDashboardState();
+
   const deleteMutation = useDeleteStation();
   const statusMutation = useUpdateStationStatus();
+  const trackStation = useTrackStation();
+  const refreshStation = useRefreshStation();
+  const checkStationActives = useCheckStationActiveness();
 
   const [page, setPage] = useState(0);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [deleteTarget, setDeleteTarget] = useState<StationResponse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StationResponse | null>(
+    null,
+  );
 
   const stations: StationResponse[] = data ?? [];
 
@@ -96,8 +112,7 @@ export default function StationsList({
         s.address?.toLowerCase().includes(search.toLowerCase()) ||
         s.device?.toLowerCase().includes(search.toLowerCase());
 
-      const matchesStatus =
-        statusFilter === "all" || s.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || s.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -132,6 +147,30 @@ export default function StationsList({
     }
   };
 
+  const handleTrackStation = async (id: string) => {
+    try {
+      await trackStation.mutateAsync(id);
+    } catch {
+      toast.error("Station tracking request failed please try again");
+    }
+  };
+
+  const handleRefreshStation = async (id: string) => {
+    try {
+      await refreshStation.mutateAsync(id);
+    } catch {
+      toast.error("Station refresh request failed please try again");
+    }
+  };
+
+  const handleCheckStationActiveness = async (id: string) => {
+    try {
+      await checkStationActives.mutateAsync(id);
+    } catch {
+      toast.error("Station activeness check request failed please try again");
+    }
+  };
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden font-sans flex flex-col">
       {/* Header */}
@@ -141,7 +180,9 @@ export default function StationsList({
             Registered Stations
           </h2>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            <span className="font-medium text-slate-500">{filtered.length}</span>{" "}
+            <span className="font-medium text-slate-500">
+              {filtered.length}
+            </span>{" "}
             of{" "}
             <span className="font-medium text-slate-500">
               {stations.length}
@@ -204,7 +245,7 @@ export default function StationsList({
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Status
         </span>
-         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Health Status
         </span>
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">
@@ -306,7 +347,9 @@ export default function StationsList({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => onEdit(station)}
+                    onClick={() =>
+                      isBeingEdited ? onCancelEdit() : onEdit(station)
+                    }
                     title="Edit station"
                     className={`h-7 w-7 ${
                       isBeingEdited
@@ -334,9 +377,31 @@ export default function StationsList({
                         <Eye size={14} />
                         Preview
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(station)}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          isBeingEdited ? onCancelEdit() : onEdit(station)
+                        }
+                      >
                         <Pencil size={14} />
                         Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleTrackStation(station.id)}
+                      >
+                        <Tv size={14} />
+                        Track Station
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleRefreshStation(station.id)}
+                      >
+                        <RefreshCcw size={14} />
+                        Refresh Station
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleCheckStationActiveness(station.id)}
+                      >
+                        <Radio size={14} />
+                        Ping Station
                       </DropdownMenuItem>
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
@@ -363,6 +428,8 @@ export default function StationsList({
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => setDeleteTarget(station)}
+                        disabled={isBeingEdited}
+                        className={`${isBeingEdited ? "pointer-events-none" : ""}`}
                       >
                         <Trash2 size={14} />
                         Delete

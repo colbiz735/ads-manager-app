@@ -165,11 +165,13 @@ function deriveCdnShort(url: string): string {
 interface ScheduleListProps {
   onEdit: (schedule: ScheduleResponse) => void;
   editTargetId: string | null;
+  onCancelEdit: () => void;
 }
 
 export default function SchedulesList({
   onEdit,
   editTargetId,
+  onCancelEdit,
 }: ScheduleListProps) {
   const { data, isLoading, isError } = useFetchSchedules();
   const { data: stationsData } = useFetchStations();
@@ -178,8 +180,12 @@ export default function SchedulesList({
 
   const [page, setPage] = useState(0);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [filters, setFilters] = useState<ScheduleFilters>(DEFAULT_SCHEDULE_FILTERS);
-  const [deleteTarget, setDeleteTarget] = useState<ScheduleResponse | null>(null);
+  const [filters, setFilters] = useState<ScheduleFilters>(
+    DEFAULT_SCHEDULE_FILTERS,
+  );
+  const [deleteTarget, setDeleteTarget] = useState<ScheduleResponse | null>(
+    null,
+  );
 
   const schedules: ScheduleResponse[] = data ?? [];
   const stations = stationsData ?? [];
@@ -216,7 +222,9 @@ export default function SchedulesList({
     if (!deleteTarget) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success(`"${deriveMediaName(deleteTarget.mediaUrl)}" has been deleted`);
+      toast.success(
+        `"${deriveMediaName(deleteTarget.mediaUrl)}" has been deleted`,
+      );
       setDeleteTarget(null);
     } catch {
       toast.error("Failed to delete schedule");
@@ -232,7 +240,9 @@ export default function SchedulesList({
             Active Schedules
           </h2>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            <span className="font-medium text-slate-500">{filtered.length}</span>{" "}
+            <span className="font-medium text-slate-500">
+              {filtered.length}
+            </span>{" "}
             of{" "}
             <span className="font-medium text-slate-500">
               {schedules.length}
@@ -382,7 +392,9 @@ export default function SchedulesList({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => onEdit(schedule)}
+                    onClick={() =>
+                      isBeingEdited ? onCancelEdit() : onEdit(schedule)
+                    }
                     title="Edit schedule"
                     className={`h-7 w-7 ${
                       isBeingEdited
@@ -439,6 +451,8 @@ export default function SchedulesList({
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => setDeleteTarget(schedule)}
+                        disabled={isBeingEdited}
+                        className={`${isBeingEdited ? "pointer-events-none" : ""}`}
                       >
                         <Trash2 size={14} />
                         Delete

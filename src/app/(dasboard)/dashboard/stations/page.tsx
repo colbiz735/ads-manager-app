@@ -44,6 +44,7 @@ export default function StationsPage() {
           <StationsList
             onEdit={handleEdit}
             editTargetId={editTarget?.id ?? null}
+            onCancelEdit={handleCancelEdit}
           />
         </div>
       </div>

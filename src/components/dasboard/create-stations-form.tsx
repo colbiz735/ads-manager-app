@@ -112,7 +112,7 @@ export default function CreateStationForm({
             <span className="h-6 w-6 flex items-center justify-center rounded-md bg-amber-60 text-amber-800">
               <Pencil size={13} />
             </span>
-          ) : ( 
+          ) : (
             <span className="h-6 w-6 flex items-center justify-center rounded-md bg-slate-100 text-slate-500">
               <Radio size={13} />
             </span>

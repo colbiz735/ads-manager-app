@@ -95,3 +95,12 @@ export interface ScheduleResponse {
     { value: Weekdays.SATURDAY, label: "Sat" },
     { value: Weekdays.SUNDAY, label: "Sun" },
   ];
+
+  export interface ClientTracker {
+  stationId: string;
+  ads?: string;
+  syncSession?: string;
+  playBackTracking?: string;
+  deviceMeta?: string;
+  databaseMeta?: string;
+}

@@ -50,7 +50,11 @@ export default function SchedulesPage() {
 
         {/* PANEL B: ACTIVE SCHEDULES SIDE (Takes 6 Fractions Columns space) */}
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <SchedulesList onEdit={handleEdit} editTargetId={editTarget?.id ?? null} />
+          <SchedulesList
+            onEdit={handleEdit}
+            editTargetId={editTarget?.id ?? null}
+            onCancelEdit={handleCancelEdit}
+          />
         </div>
       </div>
     </div>

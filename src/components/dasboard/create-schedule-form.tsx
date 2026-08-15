@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller, set } from "react-hook-form";
 import {
   UploadCloud,
   Film,
@@ -21,7 +21,6 @@ import {
 import {
   DEFAULT_AD_CATEGORIES,
   OwnershipType,
-  Weekdays,
 } from "@/src/types/enums";
 import {
   CreateScheduleDto,
@@ -112,6 +111,7 @@ export default function CreateScheduleForm({
   const updateScheduleMutation = useUpdateSchedule(onCancelEdit, editTarget);
   const isPending =
     createScheduleMutation.isPending || updateScheduleMutation.isPending;
+  const [mediaType, setMediaType] = useState<MediaType | string>("");
 
   // Derive available categories based on station selection
   const activeSelectedStation = stationList.find(
@@ -138,6 +138,10 @@ export default function CreateScheduleForm({
       setValue("ownership", OwnershipType.GLOBAL);
     }
   }, [selectedStationId, setValue]);
+
+  useEffect(() => {
+    setMediaType(uploadedMedia?.mediaType || editTarget?.mediaType || '');
+  }, [uploadedMedia, editTarget]);
 
   // Handle real media upload
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +201,6 @@ export default function CreateScheduleForm({
   // Before RHF validation runs, manually validate the media upload since it's
   // outside the form's register flow, then focus the first error field.
   const onSubmit = (data: CreateScheduleDto) => {
-    console.log("data", data);
     if (!uploadedMedia && !isEditMode) {
       setError("mediaUrl", {
         message: "Please upload a media file before submitting.",
@@ -280,7 +283,6 @@ export default function CreateScheduleForm({
   const inputNormal = `${inputBase} border-slate-200 focus:border-slate-400 text-slate-700 bg-white cursor-pointer`;
   const inputError = `${inputBase} border-red-400 focus:border-red-500 text-slate-700 bg-white`;
 
-  const mediaType = uploadedMedia?.mediaType || editTarget?.mediaType;
   return (
     <div className="w-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden font-sans">
       {/* Header */}

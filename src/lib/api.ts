@@ -32,7 +32,7 @@ export const apiService = {
    * Dispatches the structured DTO payload to create a station
    */
   async createStation(dto: CreateStationDto): Promise<StationResponse> {
-    const response = await fetch(`${API_BASE_URL}/v1/ads/create-station`, {
+    const response = await fetch(`${API_BASE_URL}/v1/ads/station/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -62,7 +62,7 @@ export const apiService = {
       return;
     }
     const response = await fetch(
-      `${API_BASE_URL}/v1/ads/update-station/?id=${station.id}`,
+      `${API_BASE_URL}/v1/ads/station/update/?id=${station.id}`,
       {
         method: "PUT",
         headers: {
@@ -203,7 +203,7 @@ export const apiService = {
    */
   async deleteStation(id: string): Promise<boolean> {
     const response = await fetch(
-      `${API_BASE_URL}/v1/ads/delete-station/?id=${id}`,
+      `${API_BASE_URL}/v1/ads/station/delete/?id=${id}`,
       { method: "DELETE" },
     );
 
@@ -233,5 +233,68 @@ export const apiService = {
       );
     }
     return true;
+  },
+
+  /**
+   * Track a station
+   */
+  async trackStation(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/v1/ads/station/track`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ stationId: id }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to track station: ${response.statusText}`,
+      );
+    }
+  },
+
+  /**
+   * Refresh a station
+   */
+  async refreshStation(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/v1/ads/station/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ stationId: id }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to refresh station: ${response.statusText}`,
+      );
+    }
+  },
+
+  /**
+   * Check station activeness
+   */
+  async checkStationActiveness(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/v1/ads/station/check-activeness`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ stationId: id }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to check station activeness: ${response.statusText}`,
+      );
+    }
   },
 };

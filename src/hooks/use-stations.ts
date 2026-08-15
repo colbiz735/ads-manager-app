@@ -90,3 +90,30 @@ export function useUpdateStationStatus() {
     },
   });
 }
+
+/**
+ * Hook to track a station
+ */
+export function useTrackStation() {
+  return useMutation({
+    mutationFn: (id: string) => apiService.trackStation(id),
+  });
+}
+
+/**
+ * Hook to refresh a station
+ */
+export function useRefreshStation() {
+  return useMutation({
+    mutationFn: (id: string) => apiService.refreshStation(id),
+  });
+}
+
+/**
+ * Hook to check a station activeness
+ */
+export function useCheckStationActiveness() {
+  return useMutation({
+    mutationFn: (id: string) => apiService.checkStationActiveness(id),
+  });
+}
