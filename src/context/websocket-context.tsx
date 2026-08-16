@@ -31,9 +31,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     const ws = new WebSocket(apiBaseUrl);
 
     ws.onopen = () => {
-      if (env === "development") {
         console.info("Websocket connection established");
-      }
 
       if (ws && ws.readyState)
         ws.send(JSON.stringify({ event: "register-dashboard" }));
@@ -45,6 +43,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       if (env === "development") {
         console.error("Error:-", err);
       }
+      console.error("Ws error:- Error while connecting to websocket");
     };
 
     ws.onmessage = (e) => {

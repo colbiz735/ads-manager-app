@@ -48,7 +48,7 @@ import { StatusBadge } from "./status-badge";
 import StationPreviewModal from "./station-preview-modal";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { toast } from "react-toastify";
-import { useDashboardState } from "@/src/app/context/dashboard-state-context";
+import { useDashboardState } from "@/src/context/dashboard-state-context";
 
 const PAGE_SIZE = 20;
 

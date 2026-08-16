@@ -3,8 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
-import { DashboardProvider } from "../app/context/dashboard-state-context";
-import { WebSocketProvider } from "../app/context/websocket-context";
+import { DashboardProvider } from "../context/dashboard-state-context";
+import { WebSocketProvider } from "../context/websocket-context";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
