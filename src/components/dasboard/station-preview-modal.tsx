@@ -77,21 +77,21 @@ export default function StationPreviewModal({
   const station = stations[currentIndex];
 
   useEffect(() => {
-    if (open) {
-      setCurrentIndex(initialIndex);
-      setIsLoaded(false);
-      const timer = setTimeout(() => setIsLoaded(true), 200);
-      return () => clearTimeout(timer);
-    }
+    if (!open) return;
+    
+    setCurrentIndex(initialIndex);
+    setIsLoaded(false);
+    const timer = setTimeout(() => setIsLoaded(true), 200);
+    return () => clearTimeout(timer);
   }, [open, initialIndex]);
 
   useEffect(() => {
-    if (open) {
-      setCopied(false);
-      setIsLoaded(false);
-      const timer = setTimeout(() => setIsLoaded(true), 200);
-      return () => clearTimeout(timer);
-    }
+    if (!open) return;
+
+    setCopied(false);
+    setIsLoaded(false);
+    const timer = setTimeout(() => setIsLoaded(true), 200);
+    return () => clearTimeout(timer);
   }, [currentIndex, open]);
 
   const goPrev = () =>

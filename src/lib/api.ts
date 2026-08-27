@@ -4,6 +4,7 @@ import {
   MediaType,
   StationResponse,
   CreateStationDto,
+  ClientTracker,
 } from "../types/interfaces";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -239,21 +240,41 @@ export const apiService = {
    * Track a station
    */
   async trackStation(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/v1/ads/station/track`, {
+    const dashboardId = localStorage.getItem("dashboardId");
+
+    const response = await fetch(`${API_BASE_URL}/v1/ads/station/tracking`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ stationId: id }),
+      body: JSON.stringify({ stationId: id, dashboardId }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.message ||
-          `Failed to track station: ${response.statusText}`,
+        errorData.message || `Failed to track station: ${response.statusText}`,
       );
     }
+  },
+
+    /**
+   * Get station tracking history
+   */
+  async fetchStationTrackingHistory(id: string): Promise<ClientTracker> {
+    const response = await fetch(`${API_BASE_URL}/v1/ads/station/tracking-history/?stationId=${id}`, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `Failed to track station: ${response.statusText}`,
+      );
+    }
+
+    const result = await response.json();
+    return result.data;
   },
 
   /**
@@ -281,13 +302,18 @@ export const apiService = {
    * Check station activeness
    */
   async checkStationActiveness(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/v1/ads/station/check-activeness`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const dashboardId = localStorage.getItem("dashboardId");
+
+    const response = await fetch(
+      `${API_BASE_URL}/v1/ads/station/check-activeness`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ stationId: id, dashboardId }),
       },
-      body: JSON.stringify({ stationId: id }),
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
