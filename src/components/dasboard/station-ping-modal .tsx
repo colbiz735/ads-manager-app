@@ -22,14 +22,14 @@ import { StationResponse } from "@/src/types/interfaces";
 interface StationTrackerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // onRetry: (station: StationResponse) => Promise<void>;
+  onRetry: (station: StationResponse) => Promise<void>;
   station: StationResponse | null;
 }
 
 export default function StationPingModal({
   open,
   onOpenChange,
-  // onRetry,
+  onRetry,
   station,
 }: StationTrackerModalProps) {
   const { pingStatus } = useDashboardState();
