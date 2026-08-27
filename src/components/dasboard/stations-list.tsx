@@ -119,7 +119,7 @@ export default function StationsList({
   const trackingStationRef = useRef<string | null>(null);
 
   const stations: StationResponse[] = data ?? [];
-  const [selectedStation, setSelectedStation] =
+  // const [selectedStation, setSelectedStation] =
     useState<StationResponse | null>(null);
 
   const filtered = useMemo(() => {
