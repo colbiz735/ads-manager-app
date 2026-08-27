@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   ChevronLeft,
@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { StationResponse } from "@/src/types/interfaces";
+import { hasTrackerResponse } from "@/src/lib/client-tracker-utils";
+import StationTrackerModal, { TRACK_TIMEOUT_MS } from "./station-tracker-modal";
 import {
   useDeleteStation,
   useFetchStations,
@@ -41,6 +43,7 @@ import {
   useTrackStation,
   useRefreshStation,
   useCheckStationActiveness,
+  STATION_KEYS,
 } from "@/src/hooks/use-stations";
 import { ALL_STATION_STATUSES } from "@/src/lib/status-styles";
 import { StationStatus } from "@/src/types/enums";
@@ -49,6 +52,8 @@ import StationPreviewModal from "./station-preview-modal";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { toast } from "react-toastify";
 import { useDashboardState } from "@/src/context/dashboard-state-context";
+import StationPingModal from "./station-ping-modal ";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PAGE_SIZE = 20;
 
@@ -86,8 +91,16 @@ export default function StationsList({
   onCancelEdit,
 }: StationsListProps) {
   const { data, isLoading, isError } = useFetchStations();
-  const { clientTracker: client } = useDashboardState();
+  const {
+    clientTracker,
+    setClientTracker,
+    trackingRequest,
+    setTrackingRequest,
+    setPingStatus,
+    pingStatus,
+  } = useDashboardState();
 
+  const queryClient = useQueryClient();
   const deleteMutation = useDeleteStation();
   const statusMutation = useUpdateStationStatus();
   const trackStation = useTrackStation();
@@ -101,8 +114,13 @@ export default function StationsList({
   const [deleteTarget, setDeleteTarget] = useState<StationResponse | null>(
     null,
   );
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const [pingingModalOpen, setPingingModalOpen] = useState(false);
+  const trackingStationRef = useRef<string | null>(null);
 
   const stations: StationResponse[] = data ?? [];
+  const [selectedStation, setSelectedStation] =
+    useState<StationResponse | null>(null);
 
   const filtered = useMemo(() => {
     return stations.filter((s) => {
@@ -147,13 +165,88 @@ export default function StationsList({
     }
   };
 
-  const handleTrackStation = async (id: string) => {
+  const beginTracking = (station: StationResponse) => {
+    trackingStationRef.current = station.id;
+    setClientTracker({ stationId: station.id });
+    setTrackingRequest({
+      stationId: station.id,
+      stationName: station.name,
+      status: "loading",
+      requestedAt: Date.now(),
+    });
+    setTrackerOpen(true);
+  };
+
+  const handleTrackStation = async (station: StationResponse) => {
+    setSelectedStation(station);
+    beginTracking(station);
     try {
-      await trackStation.mutateAsync(id);
+      await trackStation.mutateAsync(station.id);
     } catch {
-      toast.error("Station tracking request failed please try again");
+      trackingStationRef.current = null;
+      setTrackingRequest((prev) =>
+        prev?.stationId === station.id
+          ? {
+              ...prev,
+              status: "error",
+              errorMessage: "Failed to send tracking request to the server.",
+            }
+          : prev,
+      );
     }
   };
+
+  const handleRetryTracking = () => {
+    if (!trackingRequest) return;
+    const station = stations.find((s) => s.id === trackingRequest.stationId);
+    if (station) handleTrackStation(station);
+  };
+
+  // Promote to success when WebSocket delivers metadata for the tracked station
+  useEffect(() => {
+    if (!hasTrackerResponse(clientTracker)) return;
+
+    setTrackingRequest((prev) => {
+      if (
+        !prev ||
+        prev.status !== "loading" ||
+        clientTracker.stationId !== prev.stationId
+      ) {
+        return prev;
+      }
+
+      trackingStationRef.current = null;
+
+      return {
+        ...prev,
+        status: "success",
+        receivedAt: Date.now(),
+      };
+    });
+  }, [clientTracker]);
+
+  // Timeout if no WebSocket response arrives when tracking a station
+  useEffect(() => {
+    if (!trackingRequest || trackingRequest.status !== "loading") return;
+
+    const elapsed = Date.now() - trackingRequest.requestedAt;
+    const remaining = Math.max(0, TRACK_TIMEOUT_MS - elapsed);
+
+    const timer = window.setTimeout(() => {
+      setTrackingRequest((prev) =>
+        prev?.status === "loading" ? { ...prev, status: "timeout" } : prev,
+      );
+      trackingStationRef.current = null;
+    }, remaining);
+
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    trackingRequest?.stationId,
+    trackingRequest?.status,
+    trackingRequest?.requestedAt,
+    trackingRequest,
+  ]);
 
   const handleRefreshStation = async (id: string) => {
     try {
@@ -163,11 +256,27 @@ export default function StationsList({
     }
   };
 
-  const handleCheckStationActiveness = async (id: string) => {
+  const handleCheckStationActiveness = async (station: StationResponse) => {
+    setSelectedStation(station);
+
+    if (!pingingModalOpen) setPingingModalOpen(true);
+
+    if (pingStatus !== "loading") setPingStatus("loading");
+
+    const timer = window.setTimeout(() => {
+      setPingStatus((p) => {
+        window.clearTimeout(timer);
+        return "timeout";
+      });
+
+      queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
+    }, 30000);
+
     try {
-      await checkStationActives.mutateAsync(id);
+      await checkStationActives.mutateAsync(station.id);
     } catch {
-      toast.error("Station activeness check request failed please try again");
+      window.clearTimeout(timer);
+      setPingStatus("error");
     }
   };
 
@@ -386,7 +495,7 @@ export default function StationsList({
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleTrackStation(station.id)}
+                        onClick={() => handleTrackStation(station)}
                       >
                         <Tv size={14} />
                         Track Station
@@ -398,7 +507,7 @@ export default function StationsList({
                         Refresh Station
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleCheckStationActiveness(station.id)}
+                        onClick={() => handleCheckStationActiveness(station)}
                       >
                         <Radio size={14} />
                         Ping Station
@@ -492,6 +601,22 @@ export default function StationsList({
         resourceType="station"
         resourceName={deleteTarget?.name ?? ""}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <StationTrackerModal
+        open={trackerOpen}
+        onOpenChange={setTrackerOpen}
+        clientTracker={clientTracker}
+        onRetry={handleRetryTracking}
+        isRetrying={trackStation.isPending}
+        station={selectedStation}
+      />
+
+      <StationPingModal
+        open={pingingModalOpen}
+        onOpenChange={setPingingModalOpen}
+        onRetry={handleCheckStationActiveness}
+        station={selectedStation}
       />
     </div>
   );

@@ -6,10 +6,11 @@ import { StationStatus } from "../types/enums";
 
 export const STATION_KEYS = {
   stations: ["stations"] as const,
+  stationTrackingHistory: ["stationTrackingHistory"] as const
 };
 
 /**
- * Hook to retrieve remote asset station coordinates
+ * Hook to retrieve all registered stations
  */
 export function useFetchStations() {
   return useQuery({
@@ -92,7 +93,7 @@ export function useUpdateStationStatus() {
 }
 
 /**
- * Hook to track a station
+ * Hook to track a remote asset station
  */
 export function useTrackStation() {
   return useMutation({
@@ -101,7 +102,16 @@ export function useTrackStation() {
 }
 
 /**
- * Hook to refresh a station
+ * Hook to get a remote asset station tracking history
+ */
+export function useTrackStationHistory() {
+  return useMutation({
+    mutationFn: (id: string) => apiService.fetchStationTrackingHistory(id),
+  });
+}
+
+/**
+ * Hook to refresh a remote asset station
  */
 export function useRefreshStation() {
   return useMutation({
@@ -110,7 +120,7 @@ export function useRefreshStation() {
 }
 
 /**
- * Hook to check a station activeness
+ * Hook to check a remote asset station activeness
  */
 export function useCheckStationActiveness() {
   return useMutation({

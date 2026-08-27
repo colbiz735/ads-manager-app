@@ -96,11 +96,100 @@ export interface ScheduleResponse {
     { value: Weekdays.SUNDAY, label: "Sun" },
   ];
 
-  export interface ClientTracker {
+export interface ClientTracker {
   stationId: string;
   ads?: string;
   syncSession?: string;
   playBackTracking?: string;
   deviceMeta?: string;
   databaseMeta?: string;
+}
+
+export interface TrackerAd {
+  id: string;
+  mediaUrl: string;
+  mediaType: string;
+  duration: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+  priority: number;
+  category: string;
+  weekdays?: string;
+  timeSlots?: string;
+  frequency?: string;
+  payload?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TrackerSyncSession {
+  id: string;
+  lastSyncAt: string;
+  status: string;
+  updatedAt: string;
+  createdAt: string;
+  totalItems: number;
+  newItems: number;
+  updatedItems: number;
+  failedItems: number;
+  lastSyncDurationMs: number;
+  lastError: string | null;
+  syncVersion: number;
+}
+
+export interface TrackerPlaybackEntry {
+  scheduleId: string;
+  lastPlayedAt: string;
+}
+
+export interface TrackerDeviceMeta {
+  memory: {
+    totalGB: number;
+    usedGB: number;
+    availableGB: number;
+  };
+  storage: {
+    mount: string;
+    usePercent: number;
+    available: number;
+    used: number;
+    size: number;
+  };
+  os: {
+    platform: string;
+    distro: string;
+    release: string;
+    arch: string;
+    hostname: string;
+  };
+  cpu: {
+    manufacturer: string;
+    brand: string;
+    cores: number;
+  };
+}
+
+export interface ParsedClientTracker {
+  stationId: string;
+  ads: TrackerAd[];
+  syncSession: TrackerSyncSession | null;
+  playBackTracking: TrackerPlaybackEntry[];
+  deviceMeta: TrackerDeviceMeta | null;
+  databaseMeta: Record<string, unknown> | null;
+}
+
+export type StationTrackingStatus =
+  | "loading"
+  | "success"
+  | "error"
+  | "timeout";
+
+export interface StationTrackingRequest {
+  stationId: string;
+  stationName: string;
+  status: StationTrackingStatus;
+  requestedAt: number;
+  receivedAt?: number;
+  errorMessage?: string;
 }
