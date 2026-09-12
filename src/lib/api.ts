@@ -5,6 +5,7 @@ import {
   StationResponse,
   CreateStationDto,
   ClientTracker,
+  SchedulingAnalysisResponse,
 } from "../types/interfaces";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -258,13 +259,16 @@ export const apiService = {
     }
   },
 
-    /**
+  /**
    * Get station tracking history
    */
   async fetchStationTrackingHistory(id: string): Promise<ClientTracker> {
-    const response = await fetch(`${API_BASE_URL}/v1/ads/station/tracking-history/?stationId=${id}`, {
-      method: "GET",
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/v1/ads/station/tracking-history/?stationId=${id}`,
+      {
+        method: "GET",
+      },
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -322,5 +326,31 @@ export const apiService = {
           `Failed to check station activeness: ${response.statusText}`,
       );
     }
+  },
+
+  /**
+   * Run AI analysis before creating ads schedule
+   */
+  async runSchedulingAIanalysis(
+    schedule: CreateScheduleDto,
+    stationIds: string[],
+  ): Promise<SchedulingAnalysisResponse> {
+    const response = await fetch(`${API_BASE_URL}/v1/ai/schedule/analysis`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ stationIds, schedule }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `Failed to run scheduling AI analysis: ${response.statusText}`,
+      );
+    }
+
+    const result = await response.json();
+    return result.data;
   },
 };

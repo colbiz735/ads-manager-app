@@ -193,3 +193,156 @@ export interface StationTrackingRequest {
   receivedAt?: number;
   errorMessage?: string;
 }
+
+
+export type SchedulingDecision =
+  | "recommended"
+  | "warning"
+  | "conflict"
+  | "not_recommended";
+
+export type ConflictType =
+  | "hard_conflict"
+  | "category_competition"
+  | "frequency_competition"
+  | "capacity_pressure";
+
+export type ConflictSeverity = "low" | "medium" | "high";
+
+export type ActivityLevel = "high" | "medium" | "low";
+
+export type TimingAssessment = "favorable" | "moderate" | "unfavorable";
+
+export type RecommendationAction =
+  | "proceed"
+  | "adjust_time"
+  | "adjust_frequency"
+  | "adjust_stations"
+  | "adjust_date";
+
+export interface SchedulingAnalysisTimeSlot {
+  start: string;
+  end: string;
+}
+
+export interface SchedulingAnalysisFrequency {
+  type: "loop" | "interval";
+  intervalSeconds?: number;
+}
+
+export interface SchedulingAnalysisProposedSchedule {
+  category: string;
+  stationCount: number;
+  startDate: string;
+  endDate: string;
+  weekdays: string[];
+  timeSlots: SchedulingAnalysisTimeSlot[];
+  duration: number;
+  frequency: SchedulingAnalysisFrequency;
+}
+
+export interface SchedulingAnalysisExistingCompetition {
+  scheduleCount: number;
+  affectedStationCount: number;
+  description: string;
+}
+
+export interface SchedulingAnalysisHistoricalActivity {
+  last24Hours: number;
+  last7Days: number;
+  currentMonth: number;
+  description: string;
+}
+
+export interface SchedulingAnalysisOverview {
+  proposedSchedule: SchedulingAnalysisProposedSchedule;
+  existingCompetition: SchedulingAnalysisExistingCompetition;
+  historicalActivity: SchedulingAnalysisHistoricalActivity;
+}
+
+export interface SchedulingAnalysisConflict {
+  type: ConflictType;
+  severity: ConflictSeverity;
+  stationId?: string;
+  scheduleIds: string[];
+  title: string;
+  description: string;
+  impact: string;
+}
+
+export interface SchedulingAnalysisProposedPeriod {
+  start: string;
+  end: string;
+  activityLevel: ActivityLevel;
+  playbackCount: number;
+  description: string;
+}
+
+export interface SchedulingAnalysisPeriod {
+  start: string;
+  end: string;
+  playbackCount: number;
+}
+
+export interface SchedulingAnalysisTiming {
+  assessment: TimingAssessment;
+  proposedPeriods: SchedulingAnalysisProposedPeriod[];
+  peakPeriods: SchedulingAnalysisPeriod[];
+  lowPeriods: SchedulingAnalysisPeriod[];
+  explanation: string;
+}
+
+export interface SchedulingAnalysisStation {
+  stationId: string;
+  stationName: string;
+  activity: ActivityLevel;
+  last24Hours: number;
+  last7Days: number;
+  currentMonth: number;
+  assessment: string;
+}
+
+export interface SchedulingAnalysisSuggestedTimeSlot {
+  start: string;
+  end: string;
+  reason: string;
+}
+
+export interface SchedulingAnalysisSuggestedFrequency {
+  type: "loop" | "interval";
+  intervalSeconds?: number;
+  reason: string;
+}
+
+export interface SchedulingAnalysisSuggestedStation {
+  stationId: string;
+  stationName: string;
+  reason: string;
+}
+
+export interface SchedulingAnalysisSuggestedDateRange {
+  startDate: string;
+  endDate: string;
+  reason: string;
+}
+
+export interface SchedulingAnalysisRecommendation {
+  action: RecommendationAction;
+  reason: string;
+  suggestedTimeSlots?: SchedulingAnalysisSuggestedTimeSlot[];
+  suggestedFrequency?: SchedulingAnalysisSuggestedFrequency;
+  suggestedStations?: SchedulingAnalysisSuggestedStation[];
+  suggestedDateRange?: SchedulingAnalysisSuggestedDateRange;
+}
+
+export interface SchedulingAnalysisResponse {
+  decision: SchedulingDecision;
+  confidence: number;
+  summary: string;
+  overview: SchedulingAnalysisOverview;
+  conflicts: SchedulingAnalysisConflict[];
+  timingAnalysis: SchedulingAnalysisTiming;
+  stationAnalysis: SchedulingAnalysisStation[];
+  recommendation: SchedulingAnalysisRecommendation;
+  insights: string[];
+}
