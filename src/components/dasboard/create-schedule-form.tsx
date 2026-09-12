@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray, Controller, set } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import {
   UploadCloud,
   Film,
@@ -18,19 +18,18 @@ import {
   Pencil,
   Radio,
 } from "lucide-react";
-import {
-  DEFAULT_AD_CATEGORIES,
-  OwnershipType,
-} from "@/src/types/enums";
+import { DEFAULT_AD_CATEGORIES, OwnershipType } from "@/src/types/enums";
 import {
   CreateScheduleDto,
   MediaType,
   ScheduleResponse,
+  SchedulingAnalysisResponse,
   Weekday,
   WEEKDAY_LABELS,
 } from "@/src/types/interfaces";
 import {
   useCreateSchedule,
+  useSchedulingAnalysis,
   useUpdateSchedule,
   useUploadMedia,
 } from "@/src/hooks/use-schedules";
@@ -38,6 +37,7 @@ import { toast } from "react-toastify";
 import { defaultCreateSchedule, fillEditTarget } from "@/src/lib/constants";
 import { apiService } from "@/src/lib/api";
 import { useFetchStations } from "@/src/hooks/use-stations";
+import SchedulingAnalysisModal from "./scheduling-analysis-modal";
 
 interface CreateScheduleFormProps {
   onSuccess: () => void;
@@ -105,13 +105,24 @@ export default function CreateScheduleForm({
   // Instantiate hook modules
   const { data: stationList = [] } = useFetchStations();
 
-
   const uploadMediaMutation = useUploadMedia();
   const createScheduleMutation = useCreateSchedule();
   const updateScheduleMutation = useUpdateSchedule(onCancelEdit, editTarget);
+  const schedulingAnalysisMutation = useSchedulingAnalysis();
   const isPending =
-    createScheduleMutation.isPending || updateScheduleMutation.isPending;
+    createScheduleMutation.isPending ||
+    updateScheduleMutation.isPending ||
+    schedulingAnalysisMutation.isPending;
   const [mediaType, setMediaType] = useState<MediaType | string>("");
+
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisPhase, setAnalysisPhase] = useState<
+    "loading" | "result" | "error"
+  >("loading");
+  const [analysisResult, setAnalysisResult] =
+    useState<SchedulingAnalysisResponse | null>(null);
+  const [pendingSchedule, setPendingSchedule] =
+    useState<CreateScheduleDto | null>(null);
 
   // Derive available categories based on station selection
   const activeSelectedStation = stationList.find(
@@ -140,7 +151,7 @@ export default function CreateScheduleForm({
   }, [selectedStationId, setValue]);
 
   useEffect(() => {
-    setMediaType(uploadedMedia?.mediaType || editTarget?.mediaType || '');
+    setMediaType(uploadedMedia?.mediaType || editTarget?.mediaType || "");
   }, [uploadedMedia, editTarget]);
 
   // Handle real media upload
@@ -200,7 +211,7 @@ export default function CreateScheduleForm({
 
   // Before RHF validation runs, manually validate the media upload since it's
   // outside the form's register flow, then focus the first error field.
-  const onSubmit = (data: CreateScheduleDto) => {
+  const onSubmit = async (data: CreateScheduleDto) => {
     if (!uploadedMedia && !isEditMode) {
       setError("mediaUrl", {
         message: "Please upload a media file before submitting.",
@@ -230,18 +241,73 @@ export default function CreateScheduleForm({
         },
       });
     } else {
-      createScheduleMutation.mutate(data, {
-        onSuccess: () => {
-          // Reset form fields
-          reset(defaultCreateSchedule);
-          setUploadedMedia(null);
+      const stationIds =
+        data.locationIds.length > 0
+          ? data.locationIds
+          : stationList.map((station) => station.id);
 
-          toast.success("Successfully scheduled a new broadcast.");
-        },
-        onError: (err) => {
-          toast.error(`Failed to scheduled a new broadcast.: ${err.message}`);
-        },
+      setPendingSchedule(data);
+      setAnalysisResult(null);
+      setAnalysisPhase("loading");
+      setAnalysisOpen(true);
+
+      try {
+        const result = await schedulingAnalysisMutation.mutateAsync({
+          schedule: data,
+          stationIds,
+        });
+        setAnalysisResult(result);
+        setAnalysisPhase("result");
+      } catch {
+        setAnalysisPhase("error");
+      }
+    }
+  };
+
+  const handleProceedAfterAnalysis = () => {
+    if (!pendingSchedule) return;
+
+    createScheduleMutation.mutate(pendingSchedule, {
+      onSuccess: () => {
+        reset(defaultCreateSchedule);
+        setUploadedMedia(null);
+        setPendingSchedule(null);
+        setAnalysisResult(null);
+        setAnalysisOpen(false);
+        toast.success("Successfully scheduled a new broadcast.");
+        onSuccess();
+      },
+      onError: (err) => {
+        toast.error(`Failed to schedule a new broadcast: ${err.message}`);
+      },
+    });
+  };
+
+  const handleAdjustSchedule = () => {
+    setAnalysisOpen(false);
+    setAnalysisResult(null);
+    setPendingSchedule(null);
+  };
+
+  const handleRetryAnalysis = async () => {
+    if (!pendingSchedule) return;
+
+    const stationIds =
+      pendingSchedule.locationIds.length > 0
+        ? pendingSchedule.locationIds
+        : stationList.map((station) => station.id);
+
+    setAnalysisPhase("loading");
+
+    try {
+      const result = await schedulingAnalysisMutation.mutateAsync({
+        schedule: pendingSchedule,
+        stationIds,
       });
+      setAnalysisResult(result);
+      setAnalysisPhase("result");
+    } catch {
+      setAnalysisPhase("error");
     }
   };
 
@@ -880,13 +946,30 @@ export default function CreateScheduleForm({
             {isPending
               ? isEditMode
                 ? "Saving changes..."
-                : "Publishing..."
+                : schedulingAnalysisMutation.isPending
+                  ? "Analyzing schedule..."
+                  : "Publishing..."
               : isEditMode
                 ? "Save Changes"
                 : "Create Schedule"}
           </button>
         </form>
       </div>
+
+      <SchedulingAnalysisModal
+        open={analysisOpen}
+        onOpenChange={(open) => {
+          if (!open && analysisPhase !== "loading") {
+            handleAdjustSchedule();
+          }
+        }}
+        phase={analysisPhase}
+        analysis={analysisResult}
+        onProceed={handleProceedAfterAnalysis}
+        onAdjust={handleAdjustSchedule}
+        onRetry={handleRetryAnalysis}
+        isProceeding={createScheduleMutation.isPending}
+      />
     </div>
   );
 }

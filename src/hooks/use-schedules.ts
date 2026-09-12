@@ -79,6 +79,21 @@ export function useDeleteSchedule() {
 }
 
 /**
+ * Mutation hook to run AI scheduling analysis before creating a schedule
+ */
+export function useSchedulingAnalysis() {
+  return useMutation({
+    mutationFn: ({
+      schedule,
+      stationIds,
+    }: {
+      schedule: CreateScheduleDto;
+      stationIds: string[];
+    }) => apiService.runSchedulingAIanalysis(schedule, stationIds),
+  });
+}
+
+/**
  * Hook to update schedule status
  */
 export function useUpdateScheduleStatus() {
