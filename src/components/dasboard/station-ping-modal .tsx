@@ -53,7 +53,8 @@ export default function StationPingModal({
                 Checking Station Activeness
               </DialogTitle>
               <DialogDescription className="text-xs font-medium text-slate-500 mt-1 truncate">
-                Station ID: <span className="text-sm text-slate-600">{station?.name}</span>
+                Station ID:{" "}
+                <span className="text-sm text-slate-600">{station?.name}</span>
               </DialogDescription>
             </div>
           </div>
@@ -107,21 +108,24 @@ export default function StationPingModal({
 
         {pingStatus === "success" && (
           <div className="flex flex-col items-center py-10 px-6 text-center gap-4 animate-in zoom-in-95 duration-300">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 shadow-inner">
-              <CheckCircle2 size={22} className="text-emerald-600" />
+            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${station?.status === "approved" ? 'bg-emerald-500  hover:bg-emerald-600' : 'bg-amber-200 border border-amber-100'} shadow-inner`}>
+              <CheckCircle2
+                size={22}
+                className={`${station?.status === "approved" ? "text-white" : "text-amber-500"}`}
+              />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-800">
                 Station Operational
               </p>
               <p className="text-xs text-slate-500 max-w-[240px] leading-relaxed">
-                Pinging successful. The system is up, running, and playing ads.
+                {`Pinging successful. The station is ${station?.status === "approved" ? "up, running, and playing ads." : station?.status}.`}
               </p>
             </div>
             <Button
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-5 text-xs font-medium rounded-xl shadow-sm border border-emerald-700/20"
+              className={`${station?.status === "approved" ? "bg-emerald-500  hover:bg-emerald-700" : "bg-amber-500  hover:bg-amber-600"} text-white h-9 px-5 text-xs font-medium rounded-xl shadow-sm border border-emerald-700/20`}
             >
               Done
             </Button>

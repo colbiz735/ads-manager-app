@@ -19,24 +19,34 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const { setClientTracker, setPingStatus } = useDashboardState();
 
-  useEffect(() => {
-    const apiBaseUrl = String(
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ""),
-    );
-    const env = process.env.NODE_ENV;
+useEffect(() => {
+  const apiBaseUrl = String(
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ""),
+  );
+  const env = process.env.NODE_ENV;
 
-    if (!apiBaseUrl || typeof window === "undefined") {
-      return;
-    }
+  if (!apiBaseUrl || typeof window === "undefined") {
+    return;
+  }
 
-    const ws = new WebSocket(apiBaseUrl);
+  let ws: WebSocket | null = null;
+  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let isUnmounted = false;
+  let reconnectDelay = 1000;
+  const maxReconnectDelay = 30_000;
+
+  const connect = () => {
+    if (isUnmounted) return;
+
+    ws = new WebSocket(apiBaseUrl);
 
     ws.onopen = () => {
       console.info("Websocket connection established");
+      reconnectDelay = 1000; // reset backoff on successful connect
 
-      if (ws && ws.readyState) {
-        const dashboardId = createDashboardId()
-        
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const dashboardId = createDashboardId();
+
         ws.send(
           JSON.stringify({
             event: "register-dashboard",
@@ -46,7 +56,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           }),
         );
       }
-
       setWebsocket(ws);
     };
 
@@ -54,10 +63,9 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       if (env === "development") {
         console.error("Error:-", err);
       }
-
-      if (localStorage.getItem("dashboardId"))
+      if (localStorage.getItem("dashboardId")) {
         localStorage.removeItem("dashboardId");
-
+      }
       console.error("Ws error:- Error while connecting to websocket");
     };
 
@@ -71,14 +79,47 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
       if (event === "ping-station-response") {
         setPingStatus("success");
-        
+        // Revalidate station data
+        queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
+      }
+
+      if (event === "re-validate-stations") {
         // Revalidate station data
         queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
       }
     };
 
-    return () => ws.close();
-  }, []);
+    ws.onclose = () => {
+      // Don't reconnect if the component unmounted
+      if (isUnmounted) return;
+
+      console.info(
+        `Websocket closed. Reconnecting in ${reconnectDelay / 1000}s...`,
+      );
+
+      reconnectTimeout = setTimeout(() => {
+        connect();
+      }, reconnectDelay);
+
+      // Exponential backoff
+      reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelay);
+    };
+  };
+
+  connect();
+
+  return () => {
+    isUnmounted = true;
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+    }
+    if (ws) {
+      // Prevent the onclose handler from scheduling another reconnect
+      ws.onclose = null;
+      ws.close();
+    }
+  };
+}, []);
 
   return (
     <WebsocketStateContext.Provider value={websocket}>

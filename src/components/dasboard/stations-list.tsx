@@ -264,7 +264,9 @@ export default function StationsList({
     if (pingStatus !== "loading") setPingStatus("loading");
 
     const timer = window.setTimeout(() => {
-      setPingStatus((p) => {
+      setPingStatus((currentStatus) => {
+        if (currentStatus === "success") return currentStatus;
+
         window.clearTimeout(timer);
         return "timeout";
       });
