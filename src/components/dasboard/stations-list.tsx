@@ -10,10 +10,12 @@ import {
   Eye,
   Trash2,
   Server,
-  Tv,
+    Tv,
   Radio,
   RefreshCcw,
+  History,
 } from "lucide-react";
+
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -53,7 +55,9 @@ import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { toast } from "react-toastify";
 import { useDashboardState } from "@/src/context/dashboard-state-context";
 import StationPingModal from "./station-ping-modal ";
+import { PlaybackHistoryModal } from "./playback-history-modal";
 import { useQueryClient } from "@tanstack/react-query";
+
 
 const PAGE_SIZE = 20;
 
@@ -90,7 +94,6 @@ export default function StationsList({
   editTargetId,
   onCancelEdit,
 }: StationsListProps) {
-  const { data, isLoading, isError } = useFetchStations();
   const {
     clientTracker,
     setClientTracker,
@@ -106,6 +109,7 @@ export default function StationsList({
   const trackStation = useTrackStation();
   const refreshStation = useRefreshStation();
   const checkStationActives = useCheckStationActiveness();
+  const { data, isLoading, isError } = useFetchStations();
 
   const [page, setPage] = useState(0);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -114,9 +118,12 @@ export default function StationsList({
   const [deleteTarget, setDeleteTarget] = useState<StationResponse | null>(
     null,
   );
-  const [trackerOpen, setTrackerOpen] = useState(false);
+    const [trackerOpen, setTrackerOpen] = useState(false);
   const [pingingModalOpen, setPingingModalOpen] = useState(false);
+  const [playbackHistoryTarget, setPlaybackHistoryTarget] =
+    useState<StationResponse | null>(null);
   const trackingStationRef = useRef<string | null>(null);
+
 
   const stations: StationResponse[] = data ?? [];
   const [selectedStation, setSelectedStation] =
@@ -272,7 +279,7 @@ export default function StationsList({
       });
 
       queryClient.invalidateQueries({ queryKey: STATION_KEYS.stations });
-    }, 30000);
+    }, 70000);
 
     try {
       await checkStationActives.mutateAsync(station.id);
@@ -508,13 +515,20 @@ export default function StationsList({
                         <RefreshCcw size={14} />
                         Refresh Station
                       </DropdownMenuItem>
-                      <DropdownMenuItem
+                                            <DropdownMenuItem
                         onClick={() => handleCheckStationActiveness(station)}
                       >
                         <Radio size={14} />
                         Ping Station
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setPlaybackHistoryTarget(station)}
+                      >
+                        <History size={14} />
+                        Playback History
+                      </DropdownMenuItem>
                       <DropdownMenuSub>
+
                         <DropdownMenuSubTrigger>
                           Change status
                         </DropdownMenuSubTrigger>
@@ -614,12 +628,20 @@ export default function StationsList({
         station={selectedStation}
       />
 
-      <StationPingModal
+            <StationPingModal
         open={pingingModalOpen}
         onOpenChange={setPingingModalOpen}
         onRetry={handleCheckStationActiveness}
         station={selectedStation}
       />
+
+      <PlaybackHistoryModal
+        isOpen={!!playbackHistoryTarget}
+        onClose={() => setPlaybackHistoryTarget(null)}
+        stationId={playbackHistoryTarget?.id}
+        title={playbackHistoryTarget?.name ?? ""}
+      />
     </div>
   );
 }
+

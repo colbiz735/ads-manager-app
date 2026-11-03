@@ -7,6 +7,7 @@ import {
   ClientTracker,
   SchedulingAnalysisResponse,
 } from "../types/interfaces";
+import { PlaybackHistoryFilters, PlaybackHistoryResponse } from "../types/playback-history.types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -328,7 +329,7 @@ export const apiService = {
     }
   },
 
-  /**
+    /**
    * Run AI analysis before creating ads schedule
    */
   async runSchedulingAIanalysis(
@@ -346,11 +347,53 @@ export const apiService = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.message || `Failed to run scheduling AI analysis: ${response.statusText}`,
+        errorData.message ||
+          `Failed to run scheduling AI analysis: ${response.statusText}`,
       );
     }
 
     const result = await response.json();
     return result.data;
   },
+
+  /**
+   * Fetch playback history
+   */
+    async fetchPlaybackHistory(
+    filters: PlaybackHistoryFilters,
+  ): Promise<PlaybackHistoryResponse> {
+    const params = new URLSearchParams();
+    if (filters.stationId) params.append("stationId", filters.stationId);
+    if (filters.scheduleId) params.append("scheduleId", filters.scheduleId);
+    if (filters.status && filters.status !== "all")
+      params.append("status", filters.status);
+    if (filters.startDate) params.append("startDate", filters.startDate);
+    if (filters.endDate) params.append("endDate", filters.endDate);
+    if (filters.limit) params.append("limit", filters.limit.toString());
+    if (filters.cursor) {
+      params.append("cursor", JSON.stringify(filters.cursor));
+    }
+
+
+    const response = await fetch(
+      `${API_BASE_URL}/v1/ads/playback-history?${params.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to fetch playback history: ${response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  },
 };
+

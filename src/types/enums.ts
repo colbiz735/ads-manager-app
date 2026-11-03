@@ -19,13 +19,20 @@ export enum OwnershipType {
 }
 
 export enum ScheduleStatus {
-  ACTIVE = "active",
+    ACTIVE = "active",
   PAUSED = "paused",
   SUSPENDED = "suspended",
   // CANCELLED = "cancelled",
 }
 
+export enum PlaybackStatus {
+  COMPLETED = "completed",
+  FAILED = "failed",
+  INTERRUPTED = "interrupted",
+}
+
 export enum StationStatus {
+
   APPROVED = "approved",
   SUSPENDED = "suspended",
   BLOCKED = "blocked",

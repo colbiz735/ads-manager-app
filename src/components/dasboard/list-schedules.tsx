@@ -9,9 +9,11 @@ import {
   Image as ImageIcon,
   Pencil,
   MoreHorizontal,
-  Eye,
+    Eye,
   Trash2,
+  History,
 } from "lucide-react";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,8 +38,10 @@ import { ALL_SCHEDULE_STATUSES } from "@/src/lib/status-styles";
 import SchedulePreviewModal from "./schedule-preview-modal";
 import { StatusBadge } from "./status-badge";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+import { PlaybackHistoryModal } from "./playback-history-modal";
 import {
   ScheduleFiltersPanel,
+
   DEFAULT_SCHEDULE_FILTERS,
   applyScheduleFilters,
   type ScheduleFilters,
@@ -183,11 +187,14 @@ export default function SchedulesList({
   const [filters, setFilters] = useState<ScheduleFilters>(
     DEFAULT_SCHEDULE_FILTERS,
   );
-  const [deleteTarget, setDeleteTarget] = useState<ScheduleResponse | null>(
+    const [deleteTarget, setDeleteTarget] = useState<ScheduleResponse | null>(
     null,
   );
+  const [playbackHistoryTarget, setPlaybackHistoryTarget] =
+    useState<ScheduleResponse | null>(null);
 
   const schedules: ScheduleResponse[] = data ?? [];
+
   const stations = stationsData ?? [];
 
   const filtered = useMemo(
@@ -422,11 +429,18 @@ export default function SchedulesList({
                         <Eye size={14} />
                         Preview
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(schedule)}>
+                                            <DropdownMenuItem onClick={() => onEdit(schedule)}>
                         <Pencil size={14} />
                         Edit
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setPlaybackHistoryTarget(schedule)}
+                      >
+                        <History size={14} />
+                        Playback History
+                      </DropdownMenuItem>
                       <DropdownMenuSub>
+
                         <DropdownMenuSubTrigger>
                           Change status
                         </DropdownMenuSubTrigger>
@@ -508,7 +522,7 @@ export default function SchedulesList({
         />
       )}
 
-      <DeleteConfirmDialog
+            <DeleteConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
         onConfirm={handleDelete}
@@ -518,6 +532,18 @@ export default function SchedulesList({
         }
         isDeleting={deleteMutation.isPending}
       />
+
+      <PlaybackHistoryModal
+        isOpen={!!playbackHistoryTarget}
+        onClose={() => setPlaybackHistoryTarget(null)}
+        scheduleId={playbackHistoryTarget?.id}
+        title={
+          playbackHistoryTarget
+            ? deriveMediaName(playbackHistoryTarget.mediaUrl)
+            : ""
+        }
+      />
     </div>
   );
 }
+
