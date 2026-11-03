@@ -33,6 +33,9 @@ export interface PlaybackHistoryResponse {
 export interface PlaybackHistoryFilters {
   stationId?: string;
   scheduleId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
   cursor?: PlaybackHistoryCursor | null;
 }

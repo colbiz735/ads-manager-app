@@ -359,16 +359,21 @@ export const apiService = {
   /**
    * Fetch playback history
    */
-  async fetchPlaybackHistory(
+    async fetchPlaybackHistory(
     filters: PlaybackHistoryFilters,
   ): Promise<PlaybackHistoryResponse> {
     const params = new URLSearchParams();
     if (filters.stationId) params.append("stationId", filters.stationId);
     if (filters.scheduleId) params.append("scheduleId", filters.scheduleId);
+    if (filters.status && filters.status !== "all")
+      params.append("status", filters.status);
+    if (filters.startDate) params.append("startDate", filters.startDate);
+    if (filters.endDate) params.append("endDate", filters.endDate);
     if (filters.limit) params.append("limit", filters.limit.toString());
     if (filters.cursor) {
       params.append("cursor", JSON.stringify(filters.cursor));
     }
+
 
     const response = await fetch(
       `${API_BASE_URL}/v1/ads/playback-history?${params.toString()}`,
