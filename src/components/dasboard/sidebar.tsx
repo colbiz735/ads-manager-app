@@ -12,12 +12,18 @@ import {
   TrendingUp,
   X,
   MapPin,
+  History,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Schedules", href: "/dashboard/schedules", icon: CalendarDays },
-  { label: "Stations", href: "/dashboard/stations", icon: MapPin  },
+  { label: "Stations", href: "/dashboard/stations", icon: MapPin },
+  {
+    label: "Playback History",
+    href: "/dashboard/playback-history",
+    icon: History,
+  },
   // { label: "Analytics", href: "/analytics", icon: TrendingUp },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];

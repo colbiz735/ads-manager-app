@@ -1,8 +1,10 @@
 import {
+  PlaybackStatus,
   ScheduleStatus,
   StationHealthStatus,
   StationStatus,
 } from "@/src/types/enums";
+
 
 export type StatusVariant =
   | "success"
@@ -94,7 +96,29 @@ const STATION_HEALTH_STATUS_STYLE: Record<StationHealthStatus, StatusStyle> = {
   },
 };
 
+const PLAYBACK_STATUS_STYLES: Record<PlaybackStatus, StatusStyle> = {
+  [PlaybackStatus.COMPLETED]: {
+    dot: "bg-emerald-500",
+    text: "text-emerald-600",
+    badge: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+    label: "Completed",
+  },
+  [PlaybackStatus.FAILED]: {
+    dot: "bg-red-500",
+    text: "text-red-600",
+    badge: "bg-red-50 text-red-700 ring-red-600/20",
+    label: "Failed",
+  },
+  [PlaybackStatus.INTERRUPTED]: {
+    dot: "bg-amber-500",
+    text: "text-amber-600",
+    badge: "bg-amber-50 text-amber-700 ring-amber-600/20",
+    label: "Interrupted",
+  },
+};
+
 export function getScheduleStatusStyle(status: string): StatusStyle {
+
   return (
     SCHEDULE_STATUS_STYLES[status as ScheduleStatus] ?? {
       ...FALLBACK_STYLE,
@@ -115,6 +139,15 @@ export function getStationStatusStyle(status: string): StatusStyle {
 export function getStationHealthStatusStyle(status: string): StatusStyle {
   return (
     STATION_HEALTH_STATUS_STYLE[status as StationHealthStatus] ?? {
+      ...FALLBACK_STYLE,
+      label: status.replace(/-/g, " "),
+    }
+  );
+}
+
+export function getPlaybackStatusStyle(status: string): StatusStyle {
+  return (
+    PLAYBACK_STATUS_STYLES[status as PlaybackStatus] ?? {
       ...FALLBACK_STYLE,
       label: status.replace(/-/g, " "),
     }
